@@ -24,69 +24,19 @@ library(plotly)
 library(voxel)
 library(htmlwidgets)
 library(readr)
+
+'%!in%' <- function(x,y)!('%in%'(x,y))
+
 ```
 
-# df Import
-
-```{r}
-Final_dataset_96_590of_Sodium_concentration_consciousness_and_mortality_in_critical_illness_2_4_20_for_miguel <- read_csv("../data/Final dataset 96,590of Sodium concentration, consciousness, and mortality in critical illness 2-4-20 for miguel.csv")
-
-df<-Final_dataset_96_590of_Sodium_concentration_consciousness_and_mortality_in_critical_illness_2_4_20_for_miguel
-
-df<-df[complete.cases(df),]
-
-df$hospmortality<-as.character(df$hospmortality)
-df$mechvent_day01<-as.character(df$mechvent_day01)
-```
-
-# New variables creation
-
-```{r}
-df$normal_gcs<-if_else(df$gcs_baseline==15,1,0)
-```
-
-# Exclusion criteria
-
-We are excluding patients with a baseline sodium outside of our groups.
-
-```{r}
-df<-df%>%filter(sodium1>=120)
-```
-
-# Addresing variables distribution
-
-## Selecting variables
-
-```{r}
-df<-df%>%select(hospmortality,`sodium categories`,sodium1,gcs_baseline,apachescore,patientage,patientgender,ethnicity,unittype , apachedxgroup , charlson_liver1 ,charlson_chf1,mechvent_day01)%>%mutate(
-  sodium_cats=as.factor(`sodium categories`)
-)
-```
-
-## Studying initial variables distribution
-
-```{r}
-par(mfrow=c(1,2))
-for (i in 1:ncol(df)) {
-colname<-names(df[i])  
-ifelse( nrow(unique(df[i]))<10  
-        ,barplot(table(df[i]),main=colname,xlab=colname)
-        ,hist(as.numeric(unlist(df[,i]))
-        ,main = paste("Histogram of" ,colname),xlab=colname)
-         )
-cat('Summary of ',colname,'\n',sep = '')  
-cat(summary(df[i]),'\n',sep = '|')
-}
-```
-
-# Continuous Baseline GCS
+# Continuous Baseline GCS Analysis
 
 ## The total effect
 
 ```{r}
 fit_totaleffect<-gam(as.factor(hospmortality)~  s(sodium1) + apachescore+patientage+patientgender+ethnicity+unittype + apachedxgroup + charlson_liver1 +charlson_chf1 
                    + mechvent_day01 # must mech vent be included ?
-                   ,df,family = 'binomial')
+                   , john_dataset,family = 'binomial')
 
 
 summary(fit_totaleffect)
@@ -119,7 +69,7 @@ plotgam_model_GFR_Cys_0C_exp$uci<-(plotgam_model_GFR_Cys_0C_exp$fit) + 2 * (plot
 
 p<-ggplot(plotgam_model_GFR_Cys_0C_exp, aes(sodium1, fit))+
     geom_line(colour="#16a085")+
-    geom_ribbon(df=plotgam_model_GFR_Cys_0C_exp,aes(ymin=lci,ymax=uci),alpha=0.3)+
+    geom_ribbon( john_dataset=plotgam_model_GFR_Cys_0C_exp,aes(ymin=lci,ymax=uci),alpha=0.3)+
     xlab('Baseline Sodium')+
     ylab('Mortality')+
     theme_minimal()+ labs(title="NDE: GAM with spline in sodium 1 (adjusted)")   
@@ -133,7 +83,7 @@ p
 
 ```{r}
 fit_mediator<-lm(gcs_baseline ~ sodium1 + apachescore+patientage+patientgender+ethnicity+unittype + apachedxgroup + charlson_liver1 +charlson_chf1 + mechvent_day01
-                   ,data=df)
+                   ,data= john_dataset)
 
 
 summary(fit_mediator)
@@ -144,7 +94,7 @@ summary(fit_mediator)
 
 ```{r}
 fit_gam<-gam(gcs_baseline ~ s(sodium1) + apachescore+patientage+patientgender+ethnicity+unittype + apachedxgroup + charlson_liver1 +charlson_chf1 + mechvent_day01
-                   ,data=df)
+                   ,data= john_dataset)
 
 
 plotgam_model_GFR_Cys_0C<-plotGAM(gamFit = fit_gam, smooth.cov = c("sodium1") 
@@ -165,7 +115,7 @@ plotgam_model_GFR_Cys_0C_exp$uci<-(plotgam_model_GFR_Cys_0C_exp$fit) + 2 * (plot
 
 p<-ggplot(plotgam_model_GFR_Cys_0C_exp, aes(sodium1, fit,colour="#16a085"))+
     geom_line()+
-    geom_ribbon(df=plotgam_model_GFR_Cys_0C_exp,aes(ymin=lci,ymax=uci),alpha=0.3)+
+    geom_ribbon( john_dataset=plotgam_model_GFR_Cys_0C_exp,aes(ymin=lci,ymax=uci),alpha=0.3)+
     xlab('Baseline Sodium')+
     ylab('Baseline GCS')+
     theme_minimal()+ labs(title="Generalized Additive Model with spline in sodium 1 (adjusted)")   
@@ -181,7 +131,7 @@ p
 ```{r}
 fit_dv<-gam(as.factor(hospmortality) ~ s(gcs_baseline) + s(sodium1) + apachescore+patientage+patientgender+ethnicity+unittype + apachedxgroup + charlson_liver1 +charlson_chf1 
                    + mechvent_day01 
-                   ,df
+                   , john_dataset
            ,family = 'binomial')
 summary(fit_dv)
 
@@ -210,7 +160,7 @@ plotgam_model_GFR_Cys_0C_exp$uci<-(plotgam_model_GFR_Cys_0C_exp$fit) + 2 * (plot
 
 p<-ggplot(plotgam_model_GFR_Cys_0C_exp, aes(gcs_baseline, fit))+
     geom_line(colour="#16a085")+
-    geom_ribbon(df=plotgam_model_GFR_Cys_0C_exp,aes(ymin=lci,ymax=uci),alpha=0.3)+
+    geom_ribbon( john_dataset=plotgam_model_GFR_Cys_0C_exp,aes(ymin=lci,ymax=uci),alpha=0.3)+
     xlab('Baseline GCS')+
     ylab('Mortality')+
     theme_minimal()+ labs(title="Effect of the mediator on the the dependent variable")   
@@ -233,18 +183,18 @@ summary(results)
 Figures
 
 ```{r}
-ggplot(df, aes(x=`sodium categories`, y=gcs_baseline, group=df$`sodium categories`) ) + geom_boxplot()+
+ggplot( john_dataset, aes(x=`sodium categories`, y=gcs_baseline, group= john_dataset$`sodium categories`) ) + geom_boxplot()+
     scale_fill_brewer(palette="BuPu")+theme_minimal()
 ```
 
-# Binary Baseline GCS
+# Binary Baseline GCS analysis
 
 ## The total effect
 
 ```{r}
 fit_totaleffect<-glm(as.factor(hospmortality)~  sodium1 + apachescore+patientage+patientgender+ethnicity+unittype + apachedxgroup + charlson_liver1 +charlson_chf1 
                    + mechvent_day01 # must mech vent be included ?
-                   ,df,family = 'binomial')
+                   , john_dataset,family = 'binomial')
 summary(fit_totaleffect)
 
 OR_table<-as.data.frame(round(exp(cbind(OR=coef(fit_totaleffect), confint.default(fit_totaleffect))),2))
@@ -257,7 +207,7 @@ OR_table
 
 ```{r}
 fit_mediator<-lm( normal_gcs ~ sodium1 + apachescore+patientage+patientgender+ethnicity+unittype + apachedxgroup + charlson_liver1 +charlson_chf1 + mechvent_day01
-                   ,data = df)
+                   ,data =  john_dataset)
 
 
 summary(fit_mediator)
@@ -268,7 +218,7 @@ summary(fit_mediator)
 
 ```{r}
 fit_gam<-gam(normal_gcs ~ s(sodium1) + apachescore+patientage+patientgender+ethnicity+unittype + apachedxgroup + charlson_liver1 +charlson_chf1 + mechvent_day01
-                   ,data=df)
+                   ,data= john_dataset)
 
 
 plotgam_model_GFR_Cys_0C<-plotGAM(gamFit = fit_gam, smooth.cov = c("sodium1") 
@@ -306,7 +256,7 @@ p
 ```{r}
 fit_dv<-glm(as.factor(hospmortality) ~ normal_gcs + sodium1 + apachescore+patientage+patientgender+ethnicity+unittype + apachedxgroup + charlson_liver1 +charlson_chf1 
                    + mechvent_day01 
-                   ,df
+                   , john_dataset
            ,family = 'binomial')
 summary(fit_dv)
 
@@ -325,19 +275,19 @@ summary(results)
 
 ```
 
-# Binary Baseline GCS and separate Sodium bands
+# Binary Baseline GCS and separate Sodium bands analisys
 
 ## Creating the subsets
 
 ```{r}
-sodium_split <- split(df, df$sodium_cats)
+sodium_split <- split( john_dataset,  john_dataset$sodium_cats)
 ```
 
 ## Storing every subset in a different dataset
 
 ```{r}
 for (i in c(1,2,3,4,6,7)){ 
-assign( paste('sodium_cat_',i+1,'_df',sep=''), sodium_split[[i]])}
+assign( paste('sodium_cat_',i+1,'_ john_dataset',sep=''), sodium_split[[i]])}
 
 ```
 
@@ -348,7 +298,7 @@ assign( paste('sodium_cat_',i+1,'_df',sep=''), sodium_split[[i]])}
 ```{r}
 fit_totaleffect<-glm(as.factor(hospmortality)~  sodium1 + apachescore+patientage+patientgender+ethnicity+unittype + apachedxgroup + charlson_liver1 +charlson_chf1 
                    + mechvent_day01 # must mech vent be included ?
-                   ,df,family = 'binomial')
+                   , john_dataset,family = 'binomial')
 summary(fit_totaleffect)
 
 OR_table<-as.data.frame(round(exp(cbind(OR=coef(fit_totaleffect), confint.default(fit_totaleffect))),2))
@@ -361,7 +311,7 @@ OR_table
 
 ```{r}
 fit_mediator<-lm( normal_gcs ~ sodium1 + apachescore+patientage+patientgender+ethnicity+unittype + apachedxgroup + charlson_liver1 +charlson_chf1 + mechvent_day01
-                   ,data = df)
+                   ,data =  john_dataset)
 
 
 summary(fit_mediator)
@@ -372,7 +322,7 @@ summary(fit_mediator)
 
 ```{r}
 fit_gam<-gam(normal_gcs ~ s(sodium1) + apachescore+patientage+patientgender+ethnicity+unittype + apachedxgroup + charlson_liver1 +charlson_chf1 + mechvent_day01
-                   ,data=df)
+                   ,data= john_dataset)
 
 
 plotgam_model_GFR_Cys_0C<-plotGAM(gamFit = fit_gam, smooth.cov = c("sodium1") 
@@ -410,7 +360,7 @@ p
 ```{r}
 fit_dv<-glm(as.factor(hospmortality) ~ normal_gcs + sodium1 + apachescore+patientage+patientgender+ethnicity+unittype + apachedxgroup + charlson_liver1 +charlson_chf1 
                    + mechvent_day01 
-                   ,df
+                   , john_dataset
            ,family = 'binomial')
 summary(fit_dv)
 
@@ -426,5 +376,6 @@ OR_table
 results <- mediate(fit_mediator, fit_dv, treat="sodium1", mediator="normal_gcs")
 
 summary(results)
-
 ```
+
+

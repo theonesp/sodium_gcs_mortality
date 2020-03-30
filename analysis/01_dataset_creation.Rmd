@@ -1,0 +1,195 @@
+---
+title: "Sodium GCS Mediation Mortality"
+author: Miguel Ángel Armengol de la Hoz
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output:
+  html_notebook:
+    code_folding: hide
+    number_sections: yes
+    theme: flatly
+    toc: yes
+    toc_float: yes
+
+knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = encoding, output_file = paste0(substr(inputFile,1,nchar(inputFile)-4)," ",Sys.Date(),'.html')) })
+---
+
+# Environment
+
+```{r message=FALSE, warning=FALSE}
+library(dplyr)
+library(ggplot2)
+library(mediation)
+library(mgcv)
+library(plotly)
+library(voxel)
+library(htmlwidgets)
+library(readr)
+library(bigrquery)
+winsorize_x = function(x, cut = 0.05){
+  cut_point_top <- quantile(x, 1 - cut, na.rm = T)
+  cut_point_bottom <- quantile(x, cut, na.rm = T)
+  i = which(x >= cut_point_top) 
+  x[i] = cut_point_top
+  j = which(x <= cut_point_bottom) 
+  x[j] = cut_point_bottom
+  return(x)
+}
+
+'%!in%' <- function(x,y)!('%in%'(x,y))
+
+```
+
+# Data Load
+
+## Set up BigQuery related functions
+
+This chunks also creates the run_query and get_sql function.
+
+```{r setup, include=FALSE}
+# Updated for our year
+project_id <- "hst-953-2018"
+options(httr_oauth_cache=FALSE)
+# Function that takes in a sql command and runs it on bigquery
+run_query <- function(query){
+  data <- query_exec(query, project=project_id, use_legacy_sql=FALSE,max_pages = Inf)
+  return(data)
+}
+
+# function for reading sql files
+getSQL <- function(filepath){
+  con = file(filepath, "r")
+  sql.string <- ""
+
+  while (TRUE){
+    line <- readLines(con, n = 1)
+
+    if ( length(line) == 0 ){
+      break
+    }
+
+    line <- gsub("\\t", " ", line)
+
+    if(grepl("--",line) == TRUE){
+      line <- paste(sub("--","/*",line),"*/")
+    }
+
+    sql.string <- paste(sql.string, line)
+  }
+
+  close(con)
+  return(sql.string)
+}
+
+```
+
+## SQL Extraction
+
+### Apache
+
+The _apacheapsvar_ table contains the variables used to calculate the Acute Physiology Score (APS) III for patients. APS-III is an established method of summarizing patient severity of illness on admission to the ICU.
+
+The score is part of the Acute Physiology Age Chronic Health Evaluation (APACHE) system of equations for predicting outcomes for ICU patients. See: http://eicu-crd.mit.edu/eicutables/apacheApsVar/
+
+The _apachepredvar_ table provides variables underlying the APACHE predictions. Acute Physiology Age Chronic Health Evaluation (APACHE) consists of a groups of equations used for predicting outcomes in critically ill patients. See: http://eicu-crd.mit.edu/eicutables/apachePredVar/
+
+We are extracting all variables needed to calculate apache except sodium.
+
+```{r}
+apacheapsvar <- run_query(getSQL("sql/apacheapsvar.sql" ))
+apachepredvar <- run_query(getSQL("sql/apachepredvar.sql" ))
+selected_columns<-names(apachepredvar[names(apachepredvar) %!in% names(apacheapsvar)])
+selected_columns<-c('patientunitstayid',selected_columns)
+
+allapachevars<-inner_join(apacheapsvar
+                         ,apachepredvar[,selected_columns]
+                        ,by='patientunitstayid')
+```
+
+### Other variables
+
+```{r}
+basic_demographics <- run_query(getSQL("sql/basic_demographics.sql" ))
+gcs_baseline <- run_query(getSQL("sql/gcs_baseline.sql" ))
+admission_sodium <- run_query(getSQL("sql/admission_sodium.sql" ))
+charlson_score <- run_query(getSQL("sql/charlson_score.sql" ))
+charlson_score<-charlson_score%>%select(patientunitstayid,charlson_liver1 ,charlson_chf1)
+ventilated_binary_first_day <- run_query(getSQL("sql/ventilated_binary_first_day.sql" ))
+apache_groups <- run_query(getSQL("sql/apache_groups.sql" ))
+
+```
+
+## Excel Import
+
+We are not using this anymore
+
+```{r eval=FALSE, include=FALSE}
+john_dataset <- read_csv("../data/Final dataset 96,590of Sodium concentration, consciousness, and mortality in critical illness 2-4-20 for miguel.csv")
+
+# the provided hospital mortality is not the valid one.
+john_dataset$hospmortality<-NULL
+john_dataset$mechvent_day01<-as.character( john_dataset$mechvent_day01)
+```
+
+# Inner Join
+
+```{r}
+initial_dataset<-Reduce(function(...) merge(..., all.x=TRUE), list(
+   basic_demographics
+  ,gcs_baseline
+  ,admission_sodium
+  ,charlson_score
+  ,ventilated_binary_first_day
+  ,apache_groups
+))
+```
+
+
+# Addresing variables distribution
+
+## Selecting variables
+
+```{r}
+selected_df<-initial_dataset%>%select(patientunitstayid,sodium1,gcs_baseline,apache_iv,age,gender,ethnicity,unittype  , charlson_liver1 ,charlson_chf1,mechvent_day01,apachedxgroup)
+```
+
+# Exclusion criteria
+
+We are not excluding patients with a baseline sodium outside of our groups.
+
+```{r}
+selected_df<- selected_df[complete.cases(selected_df),]
+```
+
+# New variables creation
+
+```{r}
+selected_df$normal_gcs<-if_else( selected_df$gcs_baseline==15,1,0)
+```
+
+# Addressing outliers
+
+We are applying the mean to sodium1 outliers values.
+
+```{r}
+# Median imputation for outliers
+outliers <- boxplot(selected_df$sodium1, plot=FALSE)$out
+selected_df$sodium1[which(selected_df$sodium1 %in% outliers)]<-median(selected_df$sodium1)
+```
+
+## Studying initial variables distribution
+
+```{r}
+par(mfrow=c(1,2))
+for (i in 1:ncol( selected_df)) {
+colname<-names( selected_df[i])  
+ifelse( nrow(unique( selected_df[i]))<10  
+        ,barplot(table( selected_df[i]),main=colname,xlab=colname)
+        ,hist(as.numeric(unlist( selected_df[,i]))
+        ,main = paste("Histogram of" ,colname),xlab=colname)
+         )
+cat('Summary of ',colname,'\n',sep = '')  
+cat(summary( selected_df[i]),'\n',sep = '|')
+}
+```
+
+
