@@ -1,0 +1,97 @@
+---
+title: "Sodium GCS Mediation Mortality"
+author: Miguel Ángel Armengol de la Hoz
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output:
+  html_notebook:
+    code_folding: hide
+    number_sections: yes
+    theme: flatly
+    toc: yes
+    toc_float: yes
+
+knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = encoding, output_file = paste0(substr(inputFile,1,nchar(inputFile)-4)," ",Sys.Date(),'.html')) })
+---
+
+# Environment
+
+```{r message=FALSE, warning=FALSE}
+library(dplyr)
+library(ggplot2)
+library(mediation)
+library(mgcv)
+library(plotly)
+library(voxel)
+library(htmlwidgets)
+library(readr)
+
+'%!in%' <- function(x,y)!('%in%'(x,y))
+
+```
+
+# Binary Baseline GCS analysis
+
+## Baseline sodium_cat1
+
+### The total effect
+
+```{r}
+fit_totaleffect<-glm(as.factor(hosp_mortality)~ 
+sodium_cat +                       
+gcs_baseline+apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+apachedxgroup
+# apache related variables
+                   , sodium_cat_1_df
+,family = 'binomial')
+summary(fit_totaleffect)
+
+OR_table<-as.data.frame(round(exp(cbind(OR=coef(fit_totaleffect), confint.default(fit_totaleffect))),2))
+
+OR_table
+
+```
+
+### The effect of the baseline sodium onto the mediator
+
+```{r}
+fit_mediator<-lm( normal_gcs ~ sodium_cat +                       
+gcs_baseline+apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+apachedxgroup
+# apache related variables
+ 
+                   ,data =  sodium_cat_1_df)
+
+
+summary(fit_mediator)
+
+```
+
+### The effect of the mediator on the the dependent variable
+
+```{r}
+fit_dv<-glm(as.factor(hospmortality) ~ normal_gcs + sodium_cat +
+gcs_baseline+apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+apachedxgroup
+                   + mechvent_day01 
+                   , sodium_cat_1_df
+           ,family = 'binomial')
+summary(fit_dv)
+
+OR_table<-as.data.frame(round(exp(cbind(OR=coef(fit_dv), confint.default(fit_dv))),2))
+
+OR_table
+```
+
+### Causal Mediation Analysis
+
+```{r}
+#treat is the independend variable
+results <- mediate(fit_mediator, fit_dv, treat="sodium_cat", mediator="normal_gcs")
+
+summary(results)
+
+```
+
+
+
+
+
+
+

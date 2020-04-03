@@ -26,7 +26,7 @@ library(htmlwidgets)
 library(readr)
 library(bigrquery)
 library(summarytools)
-winsorize_x = function(x, cut = 0.05){
+winsorize_x = function(x, cut = 0.005){
   cut_point_top <- quantile(x, 1 - cut, na.rm = T)
   cut_point_bottom <- quantile(x, cut, na.rm = T)
   i = which(x >= cut_point_top) 
@@ -179,11 +179,10 @@ selected_df<- selected_df[complete.cases(selected_df),]
 
 # Addressing basseline sodium outliers
 
-We are applying the mean to sodium1 outliers values.
-
 ```{r}
-# Median imputation for outliers
-selected_df$sodium1<-impute.median(selected_df$sodium1)
+# Winsorizing outliers
+selected_df$sodium1<-winsorize_x(selected_df$sodium1)
+
 ```
 
 # New variables creation
@@ -265,31 +264,31 @@ sodium_cat_7_df<-rbind(sodium_cat_7_df,sodium_cat_5_df)
 sodium_cat_8_df<-rbind(sodium_cat_8_df,sodium_cat_5_df)
 
 sodium_cat_1_df<-sodium_cat_1_df%>%mutate(
-  sodium_cat=if_else(sodium_cat==5,0,1)
+  sodium_cat=if_else(sodium_cat==5,'Ref.','cat_1')
 )
 
 sodium_cat_2_df<-sodium_cat_2_df%>%mutate(
-  sodium_cat=if_else(sodium_cat==5,0,1)
+  sodium_cat=if_else(sodium_cat==5,'Ref.','cat_2')
 )
 
 sodium_cat_3_df<-sodium_cat_3_df%>%mutate(
-  sodium_cat=if_else(sodium_cat==5,0,1)
+  sodium_cat=if_else(sodium_cat==5,'Ref.','cat_3')
 )
 
 sodium_cat_4_df<-sodium_cat_4_df%>%mutate(
-  sodium_cat=if_else(sodium_cat==5,0,1)
+  sodium_cat=if_else(sodium_cat==5,'Ref.','cat_4')
 )
 
 sodium_cat_6_df<-sodium_cat_6_df%>%mutate(
-  sodium_cat=if_else(sodium_cat==5,0,1)
+  sodium_cat=if_else(sodium_cat==5,'Ref.','cat_6')
 )
 
 sodium_cat_7_df<-sodium_cat_7_df%>%mutate(
-  sodium_cat=if_else(sodium_cat==5,0,1)
+  sodium_cat=if_else(sodium_cat==5,'Ref.','cat_7')
 )
 
 sodium_cat_8_df<-sodium_cat_8_df%>%mutate(
-  sodium_cat=if_else(sodium_cat==5,0,1)
+  sodium_cat=if_else(sodium_cat==5,'Ref.','cat_8')
 )
 
 ```
