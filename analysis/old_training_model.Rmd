@@ -1,0 +1,367 @@
+---
+title: "Sodium GCS Mediation Mortality"
+author: Miguel Ángel Armengol de la Hoz
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output:
+  html_notebook:
+    code_folding: hide
+    number_sections: yes
+    theme: flatly
+    toc: yes
+    toc_float: yes
+
+knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = encoding, output_file = paste0(substr(inputFile,1,nchar(inputFile)-4)," ",Sys.Date(),'.html')) })
+---
+
+# Environment
+
+```{r message=FALSE, warning=FALSE}
+library(dplyr)
+library(ggplot2)
+library(mediation)
+library(mgcv)
+library(plotly)
+library(voxel)
+library(htmlwidgets)
+library(readr)
+
+'%!in%' <- function(x,y)!('%in%'(x,y))
+
+```
+
+# Continuous Baseline GCS Analysis
+
+## The total effect
+
+```{r}
+fit_totaleffect<-gam(as.factor(hospmortality)~  s(sodium1) + apachescore+patientage+patientgender+ethnicity+unittype + apachedxgroup + charlson_liver1 +charlson_chf1 
+                   + mechvent_day01 # must mech vent be included ?
+                   , john_dataset,family = 'binomial')
+
+
+summary(fit_totaleffect)
+
+OR_table<-as.data.frame(round(exp(cbind(OR=coef(fit_totaleffect), confint.default(fit_totaleffect))),2))
+
+OR_table
+
+# the most optimal model introduces a spline term on sodium1 stratified by patiengage but the difference was so small we are not stratifying by age
+
+```
+
+### GAM Plot
+
+```{r}
+plotgam_model_GFR_Cys_0C<-plotGAM(gamFit = fit_totaleffect, smooth.cov = c("sodium1"),rawOrFitted = F, orderedAsFactor = FALSE) 
+
+plotgam_model_GFR_Cys_0C_exp<-as.data.frame(cbind(
+   plotgam_model_GFR_Cys_0C[["data"]][["sodium1"]]
+  ,plotgam_model_GFR_Cys_0C[["data"]][["fit"]]
+  ,plotgam_model_GFR_Cys_0C[["data"]][["se.fit"]])
+)
+
+colnames(plotgam_model_GFR_Cys_0C_exp)[1]<-'sodium1'
+colnames(plotgam_model_GFR_Cys_0C_exp)[2]<-'fit'
+colnames(plotgam_model_GFR_Cys_0C_exp)[3]<-'se.fit'
+
+plotgam_model_GFR_Cys_0C_exp$lci<-(plotgam_model_GFR_Cys_0C_exp$fit) - 2 * (plotgam_model_GFR_Cys_0C_exp$se.fit)
+plotgam_model_GFR_Cys_0C_exp$uci<-(plotgam_model_GFR_Cys_0C_exp$fit) + 2 * (plotgam_model_GFR_Cys_0C_exp$se.fit)
+
+p<-ggplot(plotgam_model_GFR_Cys_0C_exp, aes(sodium1, fit))+
+    geom_line(colour="#16a085")+
+    geom_ribbon( john_dataset=plotgam_model_GFR_Cys_0C_exp,aes(ymin=lci,ymax=uci),alpha=0.3)+
+    xlab('Baseline Sodium')+
+    ylab('Mortality')+
+    theme_minimal()+ labs(title="NDE: GAM with spline in sodium 1 (adjusted)")   
+
+#p<-ggplotly(p)%>% layout(showlegend = FALSE)
+
+p
+```
+
+## The effect of the baseline sodium onto the mediator
+
+```{r}
+fit_mediator<-lm(gcs_baseline ~ sodium1 + apachescore+patientage+patientgender+ethnicity+unittype + apachedxgroup + charlson_liver1 +charlson_chf1 + mechvent_day01
+                   ,data= john_dataset)
+
+
+summary(fit_mediator)
+
+```
+
+### GAM Plot
+
+```{r}
+fit_gam<-gam(gcs_baseline ~ s(sodium1) + apachescore+patientage+patientgender+ethnicity+unittype + apachedxgroup + charlson_liver1 +charlson_chf1 + mechvent_day01
+                   ,data= john_dataset)
+
+
+plotgam_model_GFR_Cys_0C<-plotGAM(gamFit = fit_gam, smooth.cov = c("sodium1") 
+        ,rawOrFitted = F, orderedAsFactor = FALSE) 
+
+plotgam_model_GFR_Cys_0C_exp<-as.data.frame(cbind(
+   plotgam_model_GFR_Cys_0C[["data"]][["sodium1"]]
+  ,plotgam_model_GFR_Cys_0C[["data"]][["fit"]]
+  ,plotgam_model_GFR_Cys_0C[["data"]][["se.fit"]])
+)
+
+colnames(plotgam_model_GFR_Cys_0C_exp)[1]<-'sodium1'
+colnames(plotgam_model_GFR_Cys_0C_exp)[2]<-'fit'
+colnames(plotgam_model_GFR_Cys_0C_exp)[3]<-'se.fit'
+
+plotgam_model_GFR_Cys_0C_exp$lci<-(plotgam_model_GFR_Cys_0C_exp$fit) - 2 * (plotgam_model_GFR_Cys_0C_exp$se.fit)
+plotgam_model_GFR_Cys_0C_exp$uci<-(plotgam_model_GFR_Cys_0C_exp$fit) + 2 * (plotgam_model_GFR_Cys_0C_exp$se.fit)
+
+p<-ggplot(plotgam_model_GFR_Cys_0C_exp, aes(sodium1, fit,colour="#16a085"))+
+    geom_line()+
+    geom_ribbon( john_dataset=plotgam_model_GFR_Cys_0C_exp,aes(ymin=lci,ymax=uci),alpha=0.3)+
+    xlab('Baseline Sodium')+
+    ylab('Baseline GCS')+
+    theme_minimal()+ labs(title="Generalized Additive Model with spline in sodium 1 (adjusted)")   
+
+p<-ggplotly(p)%>% layout(showlegend = FALSE)
+
+p
+```
+
+
+## The effect of the mediator on the the dependent variable
+
+```{r}
+fit_dv<-gam(as.factor(hospmortality) ~ s(gcs_baseline) + s(sodium1) + apachescore+patientage+patientgender+ethnicity+unittype + apachedxgroup + charlson_liver1 +charlson_chf1 
+                   + mechvent_day01 
+                   , john_dataset
+           ,family = 'binomial')
+summary(fit_dv)
+
+OR_table<-as.data.frame(round(exp(cbind(OR=coef(fit_dv), confint.default(fit_dv))),2))
+
+OR_table
+```
+
+### GAM Plot
+
+```{r}
+plotgam_model_GFR_Cys_0C<-plotGAM(gamFit = fit_dv, smooth.cov = c("gcs_baseline"),rawOrFitted = F, orderedAsFactor = FALSE) 
+
+plotgam_model_GFR_Cys_0C_exp<-as.data.frame(cbind(
+   plotgam_model_GFR_Cys_0C[["data"]][["gcs_baseline"]]
+  ,plotgam_model_GFR_Cys_0C[["data"]][["fit"]]
+  ,plotgam_model_GFR_Cys_0C[["data"]][["se.fit"]])
+)
+
+colnames(plotgam_model_GFR_Cys_0C_exp)[1]<-'gcs_baseline'
+colnames(plotgam_model_GFR_Cys_0C_exp)[2]<-'fit'
+colnames(plotgam_model_GFR_Cys_0C_exp)[3]<-'se.fit'
+
+plotgam_model_GFR_Cys_0C_exp$lci<-(plotgam_model_GFR_Cys_0C_exp$fit) - 2 * (plotgam_model_GFR_Cys_0C_exp$se.fit)
+plotgam_model_GFR_Cys_0C_exp$uci<-(plotgam_model_GFR_Cys_0C_exp$fit) + 2 * (plotgam_model_GFR_Cys_0C_exp$se.fit)
+
+p<-ggplot(plotgam_model_GFR_Cys_0C_exp, aes(gcs_baseline, fit))+
+    geom_line(colour="#16a085")+
+    geom_ribbon( john_dataset=plotgam_model_GFR_Cys_0C_exp,aes(ymin=lci,ymax=uci),alpha=0.3)+
+    xlab('Baseline GCS')+
+    ylab('Mortality')+
+    theme_minimal()+ labs(title="Effect of the mediator on the the dependent variable")   
+
+#p<-ggplotly(p)%>% layout(showlegend = FALSE)
+
+p
+```
+
+## Causal Mediation Analysis
+
+```{r}
+#treat is the independend variable
+results <- mediate(fit_mediator, fit_dv, treat="sodium1", mediator="gcs_baseline")
+
+summary(results)
+
+```
+
+Figures
+
+```{r}
+ggplot( john_dataset, aes(x=`sodium categories`, y=gcs_baseline, group= john_dataset$`sodium categories`) ) + geom_boxplot()+
+    scale_fill_brewer(palette="BuPu")+theme_minimal()
+```
+
+# Binary Baseline GCS analysis
+
+## The total effect
+
+```{r}
+fit_totaleffect<-glm(as.factor(hospmortality)~  sodium1 + apachescore+patientage+patientgender+ethnicity+unittype + apachedxgroup + charlson_liver1 +charlson_chf1 
+                   + mechvent_day01 # must mech vent be included ?
+                   , john_dataset,family = 'binomial')
+summary(fit_totaleffect)
+
+OR_table<-as.data.frame(round(exp(cbind(OR=coef(fit_totaleffect), confint.default(fit_totaleffect))),2))
+
+OR_table
+
+```
+
+## The effect of the baseline sodium onto the mediator
+
+```{r}
+fit_mediator<-lm( normal_gcs ~ sodium1 + apachescore+patientage+patientgender+ethnicity+unittype + apachedxgroup + charlson_liver1 +charlson_chf1 + mechvent_day01
+                   ,data =  john_dataset)
+
+
+summary(fit_mediator)
+
+```
+
+### GAM Plot
+
+```{r}
+fit_gam<-gam(normal_gcs ~ s(sodium1) + apachescore+patientage+patientgender+ethnicity+unittype + apachedxgroup + charlson_liver1 +charlson_chf1 + mechvent_day01
+                   ,data= john_dataset)
+
+
+plotgam_model_GFR_Cys_0C<-plotGAM(gamFit = fit_gam, smooth.cov = c("sodium1") 
+        ,rawOrFitted = F, orderedAsFactor = FALSE) 
+
+plotgam_model_GFR_Cys_0C_exp<-as.data.frame(cbind(
+   plotgam_model_GFR_Cys_0C[["data"]][["sodium1"]]
+  ,plotgam_model_GFR_Cys_0C[["data"]][["fit"]]
+  ,plotgam_model_GFR_Cys_0C[["data"]][["se.fit"]])
+)
+
+colnames(plotgam_model_GFR_Cys_0C_exp)[1]<-'sodium1'
+colnames(plotgam_model_GFR_Cys_0C_exp)[2]<-'fit'
+colnames(plotgam_model_GFR_Cys_0C_exp)[3]<-'se.fit'
+
+plotgam_model_GFR_Cys_0C_exp$lci<-(plotgam_model_GFR_Cys_0C_exp$fit) - 2 * (plotgam_model_GFR_Cys_0C_exp$se.fit)
+plotgam_model_GFR_Cys_0C_exp$uci<-(plotgam_model_GFR_Cys_0C_exp$fit) + 2 * (plotgam_model_GFR_Cys_0C_exp$se.fit)
+
+p<-ggplot(plotgam_model_GFR_Cys_0C_exp, aes(sodium1, fit,colour="#16a085"))+
+    geom_line()+
+    geom_ribbon(data=plotgam_model_GFR_Cys_0C_exp,aes(ymin=lci,ymax=uci),alpha=0.3)+
+    xlab('Baseline Sodium')+
+    ylab('Baseline GCS')+
+    theme_minimal()+ labs(title="Generalized Additive Model with spline in sodium 1 (adjusted)")   
+
+p<-ggplotly(p)%>% layout(showlegend = FALSE)
+
+p
+
+```
+
+
+## The effect of the mediator on the the dependent variable
+
+```{r}
+fit_dv<-glm(as.factor(hospmortality) ~ normal_gcs + sodium1 + apachescore+patientage+patientgender+ethnicity+unittype + apachedxgroup + charlson_liver1 +charlson_chf1 
+                   + mechvent_day01 
+                   , john_dataset
+           ,family = 'binomial')
+summary(fit_dv)
+
+OR_table<-as.data.frame(round(exp(cbind(OR=coef(fit_dv), confint.default(fit_dv))),2))
+
+OR_table
+```
+
+## Causal Mediation Analysis
+
+```{r}
+#treat is the independend variable
+results <- mediate(fit_mediator, fit_dv, treat="sodium1", mediator="normal_gcs")
+
+summary(results)
+
+```
+
+
+
+
+
+## The total effect
+
+```{r}
+fit_totaleffect<-glm(as.factor(hospmortality)~  sodium1 + apachescore+patientage+patientgender+ethnicity+unittype + apachedxgroup + charlson_liver1 +charlson_chf1 
+                   + mechvent_day01 # must mech vent be included ?
+                   , john_dataset,family = 'binomial')
+summary(fit_totaleffect)
+
+OR_table<-as.data.frame(round(exp(cbind(OR=coef(fit_totaleffect), confint.default(fit_totaleffect))),2))
+
+OR_table
+
+```
+
+## The effect of the baseline sodium onto the mediator
+
+```{r}
+fit_mediator<-lm( normal_gcs ~ sodium1 + apachescore+patientage+patientgender+ethnicity+unittype + apachedxgroup + charlson_liver1 +charlson_chf1 + mechvent_day01
+                   ,data =  john_dataset)
+
+
+summary(fit_mediator)
+
+```
+
+### GAM Plot
+
+```{r}
+fit_gam<-gam(normal_gcs ~ s(sodium1) + apachescore+patientage+patientgender+ethnicity+unittype + apachedxgroup + charlson_liver1 +charlson_chf1 + mechvent_day01
+                   ,data= john_dataset)
+
+
+plotgam_model_GFR_Cys_0C<-plotGAM(gamFit = fit_gam, smooth.cov = c("sodium1") 
+        ,rawOrFitted = F, orderedAsFactor = FALSE) 
+
+plotgam_model_GFR_Cys_0C_exp<-as.data.frame(cbind(
+   plotgam_model_GFR_Cys_0C[["data"]][["sodium1"]]
+  ,plotgam_model_GFR_Cys_0C[["data"]][["fit"]]
+  ,plotgam_model_GFR_Cys_0C[["data"]][["se.fit"]])
+)
+
+colnames(plotgam_model_GFR_Cys_0C_exp)[1]<-'sodium1'
+colnames(plotgam_model_GFR_Cys_0C_exp)[2]<-'fit'
+colnames(plotgam_model_GFR_Cys_0C_exp)[3]<-'se.fit'
+
+plotgam_model_GFR_Cys_0C_exp$lci<-(plotgam_model_GFR_Cys_0C_exp$fit) - 2 * (plotgam_model_GFR_Cys_0C_exp$se.fit)
+plotgam_model_GFR_Cys_0C_exp$uci<-(plotgam_model_GFR_Cys_0C_exp$fit) + 2 * (plotgam_model_GFR_Cys_0C_exp$se.fit)
+
+p<-ggplot(plotgam_model_GFR_Cys_0C_exp, aes(sodium1, fit,colour="#16a085"))+
+    geom_line()+
+    geom_ribbon(data=plotgam_model_GFR_Cys_0C_exp,aes(ymin=lci,ymax=uci),alpha=0.3)+
+    xlab('Baseline Sodium')+
+    ylab('Baseline GCS')+
+    theme_minimal()+ labs(title="Generalized Additive Model with spline in sodium 1 (adjusted)")   
+
+p<-ggplotly(p)%>% layout(showlegend = FALSE)
+
+p
+
+```
+
+
+## The effect of the mediator on the the dependent variable
+
+```{r}
+fit_dv<-glm(as.factor(hospmortality) ~ normal_gcs + sodium1 + apachescore+patientage+patientgender+ethnicity+unittype + apachedxgroup + charlson_liver1 +charlson_chf1 
+                   + mechvent_day01 
+                   , john_dataset
+           ,family = 'binomial')
+summary(fit_dv)
+
+OR_table<-as.data.frame(round(exp(cbind(OR=coef(fit_dv), confint.default(fit_dv))),2))
+
+OR_table
+```
+
+## Causal Mediation Analysis
+
+```{r}
+#treat is the independend variable
+results <- mediate(fit_mediator, fit_dv, treat="sodium1", mediator="normal_gcs")
+
+summary(results)
+```
+
+

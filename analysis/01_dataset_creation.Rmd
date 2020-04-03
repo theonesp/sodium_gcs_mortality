@@ -25,6 +25,7 @@ library(voxel)
 library(htmlwidgets)
 library(readr)
 library(bigrquery)
+library(summarytools)
 winsorize_x = function(x, cut = 0.05){
   cut_point_top <- quantile(x, 1 - cut, na.rm = T)
   cut_point_bottom <- quantile(x, cut, na.rm = T)
@@ -36,7 +37,7 @@ winsorize_x = function(x, cut = 0.05){
 }
 
 '%!in%' <- function(x,y)!('%in%'(x,y))
-
+impute.median <- function(x) replace(x, is.na(x), median(x, na.rm = TRUE))
 ```
 
 # Data Load
@@ -103,12 +104,29 @@ selected_columns<-c('patientunitstayid',selected_columns)
 allapachevars<-inner_join(apacheapsvar
                          ,apachepredvar[,selected_columns]
                         ,by='patientunitstayid')
+
+# we are removing the following variables since we already have them
+allapachevars$admitdiagnosis<-NULL
+allapachevars$age<-NULL
+allapachevars$gender<-NULL
+
+
+# we are correcting the following variable
+allapachevars<-allapachevars%>%mutate(
+  electivesurgery=if_else(is.na(electivesurgery),0,electivesurgery)
+  
+)
+
 ```
 
 ### Other variables
 
 ```{r}
 basic_demographics <- run_query(getSQL("sql/basic_demographics.sql" ))
+basic_demographics<-basic_demographics%>%mutate(
+  ethnicity=if_else(ethnicity=='Caucasian','Caucasian','Not Caucasian')
+)
+
 gcs_baseline <- run_query(getSQL("sql/gcs_baseline.sql" ))
 admission_sodium <- run_query(getSQL("sql/admission_sodium.sql" ))
 charlson_score <- run_query(getSQL("sql/charlson_score.sql" ))
@@ -118,19 +136,7 @@ apache_groups <- run_query(getSQL("sql/apache_groups.sql" ))
 
 ```
 
-## Excel Import
-
-We are not using this anymore
-
-```{r eval=FALSE, include=FALSE}
-john_dataset <- read_csv("../data/Final dataset 96,590of Sodium concentration, consciousness, and mortality in critical illness 2-4-20 for miguel.csv")
-
-# the provided hospital mortality is not the valid one.
-john_dataset$hospmortality<-NULL
-john_dataset$mechvent_day01<-as.character( john_dataset$mechvent_day01)
-```
-
-# Inner Join
+# Left Join
 
 ```{r}
 initial_dataset<-Reduce(function(...) merge(..., all.x=TRUE), list(
@@ -140,6 +146,7 @@ initial_dataset<-Reduce(function(...) merge(..., all.x=TRUE), list(
   ,charlson_score
   ,ventilated_binary_first_day
   ,apache_groups
+  ,allapachevars
 ))
 ```
 
@@ -148,8 +155,18 @@ initial_dataset<-Reduce(function(...) merge(..., all.x=TRUE), list(
 
 ## Selecting variables
 
+Apache variables:
+
+ intubated, vent, dialysis, eyes, motor, verbal, meds, urine, wbc, temperature, respiratoryrate, heartrate, meanbp, ph, hematocrit, creatinine, albumin, pao2, pco2, bun, glucose, bilirubin, fio2, sicuday, saps3day1, saps3today, saps3yesterday,  teachtype, region, bedcount, admitsource, graftcount,   thrombolytics, diedinhospital, aids, hepaticfailure, lymphoma, metastaticcancer, leukemia, immunosuppression, cirrhosis, electivesurgery, activetx, readmit, ima, midur, ventday1, oobventday1, oobintubday1, diabetes, managementsystem, var03hspxlos, ejectfx, dischargelocation, visitnumber, amilocation, day1meds, day1verbal, day1motor, day1eyes, day1pao2, day1fio2
+
 ```{r}
-selected_df<-initial_dataset%>%select(patientunitstayid,sodium1,gcs_baseline,apache_iv,age,gender,ethnicity,unittype  , charlson_liver1 ,charlson_chf1,mechvent_day01,apachedxgroup)
+selected_df<-initial_dataset%>%select(
+# initial demographics  
+patientunitstayid,sodium1,gcs_baseline,apache_iv,age,gender,ethnicity,unittype, charlson_liver1 ,charlson_chf1,mechvent_day01,apachedxgroup,
+hosp_mortality,
+# apache related variables
+intubated, vent, dialysis, eyes, motor, verbal, meds, urine, wbc, temperature, respiratoryrate, heartrate, meanbp, ph, hematocrit, creatinine, albumin, pao2, pco2, bun, glucose, bilirubin, fio2, sicuday, saps3day1, saps3today, saps3yesterday,  teachtype, region, bedcount, admitsource, graftcount,   thrombolytics, diedinhospital, aids, hepaticfailure, lymphoma, metastaticcancer, leukemia, immunosuppression, cirrhosis, electivesurgery, activetx, readmit, ima, midur, ventday1, oobventday1, oobintubday1, diabetes, managementsystem, var03hspxlos, ejectfx, dischargelocation, visitnumber, amilocation, day1meds, day1verbal, day1motor, day1eyes, day1pao2, day1fio2
+                                      )
 ```
 
 # Exclusion criteria
@@ -160,29 +177,53 @@ We are not excluding patients with a baseline sodium outside of our groups.
 selected_df<- selected_df[complete.cases(selected_df),]
 ```
 
-# New variables creation
-
-```{r}
-selected_df$normal_gcs<-if_else( selected_df$gcs_baseline==15,1,0)
-```
-
-# Addressing outliers
+# Addressing basseline sodium outliers
 
 We are applying the mean to sodium1 outliers values.
 
 ```{r}
 # Median imputation for outliers
-outliers <- boxplot(selected_df$sodium1, plot=FALSE)$out
-selected_df$sodium1[which(selected_df$sodium1 %in% outliers)]<-median(selected_df$sodium1)
+selected_df$sodium1<-impute.median(selected_df$sodium1)
 ```
 
-## Studying initial variables distribution
+# New variables creation
+
+## Normal GCS
+
+```{r}
+selected_df$normal_gcs<-if_else(selected_df$gcs_baseline==15,1,0)
+```
+
+
+## Baseline Sodium categories
+
+Categories per John criteria.
+
+<120	120 - <125	125 - <130	130 - <135	135 - <140	140 - <145	145 - <150	≥150
+
+```{r}
+selected_df<-selected_df%>%mutate(
+  sodium_cat = case_when(
+    sodium1 <=120 ~ '1',
+    between(sodium1,120,125) ~ '2',
+    between(sodium1,125,130) ~ '3',
+    between(sodium1,130,135) ~ '4',
+    between(sodium1,135,140) ~ '5', # This is the reference dataset
+    between(sodium1,140,145) ~ '6',
+    between(sodium1,145,150) ~ '7',
+    sodium1>= 150 ~ '8',
+    
+  )
+)
+```
+
+# Studying initial variables distribution
 
 ```{r}
 par(mfrow=c(1,2))
 for (i in 1:ncol( selected_df)) {
 colname<-names( selected_df[i])  
-ifelse( nrow(unique( selected_df[i]))<10  
+ifelse( nrow(unique( selected_df[i]))<30  
         ,barplot(table( selected_df[i]),main=colname,xlab=colname)
         ,hist(as.numeric(unlist( selected_df[,i]))
         ,main = paste("Histogram of" ,colname),xlab=colname)
@@ -191,5 +232,67 @@ cat('Summary of ',colname,'\n',sep = '')
 cat(summary( selected_df[i]),'\n',sep = '|')
 }
 ```
+
+# Separate Sodium bands datasets
+
+## Creating the subsets
+
+```{r}
+sodium_split <- split( selected_df,  selected_df$sodium_cat)
+```
+
+## Storing every subset in a different dataset
+
+```{r}
+for (i in c(1:max(selected_df$sodium_cat))){ 
+assign( paste('sodium_cat_',i,'_df',sep=''), sodium_split[[i]])
+  }
+```
+
+## Creating the datasets for the analysis
+
+I created 1 dataset per category that includes the category level and the reference level. I did this 7 times since category 5 is the reference and does not need a separate analysis.
+
+I coded being on the reference as 0 and being on a different sodium category as 1.
+
+```{r}
+sodium_cat_1_df<-rbind(sodium_cat_1_df,sodium_cat_5_df)
+sodium_cat_2_df<-rbind(sodium_cat_2_df,sodium_cat_5_df)
+sodium_cat_3_df<-rbind(sodium_cat_3_df,sodium_cat_5_df)
+sodium_cat_4_df<-rbind(sodium_cat_4_df,sodium_cat_5_df)
+sodium_cat_6_df<-rbind(sodium_cat_6_df,sodium_cat_5_df)
+sodium_cat_7_df<-rbind(sodium_cat_7_df,sodium_cat_5_df)
+sodium_cat_8_df<-rbind(sodium_cat_8_df,sodium_cat_5_df)
+
+sodium_cat_1_df<-sodium_cat_1_df%>%mutate(
+  sodium_cat=if_else(sodium_cat==5,0,1)
+)
+
+sodium_cat_2_df<-sodium_cat_2_df%>%mutate(
+  sodium_cat=if_else(sodium_cat==5,0,1)
+)
+
+sodium_cat_3_df<-sodium_cat_3_df%>%mutate(
+  sodium_cat=if_else(sodium_cat==5,0,1)
+)
+
+sodium_cat_4_df<-sodium_cat_4_df%>%mutate(
+  sodium_cat=if_else(sodium_cat==5,0,1)
+)
+
+sodium_cat_6_df<-sodium_cat_6_df%>%mutate(
+  sodium_cat=if_else(sodium_cat==5,0,1)
+)
+
+sodium_cat_7_df<-sodium_cat_7_df%>%mutate(
+  sodium_cat=if_else(sodium_cat==5,0,1)
+)
+
+sodium_cat_8_df<-sodium_cat_8_df%>%mutate(
+  sodium_cat=if_else(sodium_cat==5,0,1)
+)
+
+```
+
 
 
