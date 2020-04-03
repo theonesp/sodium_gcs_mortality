@@ -167,6 +167,8 @@ hosp_mortality,
 # apache related variables
 intubated, vent, dialysis, eyes, motor, verbal, meds, urine, wbc, temperature, respiratoryrate, heartrate, meanbp, ph, hematocrit, creatinine, albumin, pao2, pco2, bun, glucose, bilirubin, fio2, sicuday, saps3day1, saps3today, saps3yesterday,  teachtype, region, bedcount, admitsource, graftcount,   thrombolytics, diedinhospital, aids, hepaticfailure, lymphoma, metastaticcancer, leukemia, immunosuppression, cirrhosis, electivesurgery, activetx, readmit, ima, midur, ventday1, oobventday1, oobintubday1, diabetes, managementsystem, var03hspxlos, ejectfx, dischargelocation, visitnumber, amilocation, day1meds, day1verbal, day1motor, day1eyes, day1pao2, day1fio2
                                       )
+
+selected_df$gender<-as.factor(selected_df$gender)
 ```
 
 # Exclusion criteria
@@ -264,31 +266,31 @@ sodium_cat_7_df<-rbind(sodium_cat_7_df,sodium_cat_5_df)
 sodium_cat_8_df<-rbind(sodium_cat_8_df,sodium_cat_5_df)
 
 sodium_cat_1_df<-sodium_cat_1_df%>%mutate(
-  sodium_cat=if_else(sodium_cat==5,'Ref.','cat_1')
+  sodium_cat=if_else(sodium_cat==5,'0Ref','cat_1')
 )
 
 sodium_cat_2_df<-sodium_cat_2_df%>%mutate(
-  sodium_cat=if_else(sodium_cat==5,'Ref.','cat_2')
+  sodium_cat=if_else(sodium_cat==5,'0Ref','cat_2')
 )
 
 sodium_cat_3_df<-sodium_cat_3_df%>%mutate(
-  sodium_cat=if_else(sodium_cat==5,'Ref.','cat_3')
+  sodium_cat=if_else(sodium_cat==5,'0Ref','cat_3')
 )
 
 sodium_cat_4_df<-sodium_cat_4_df%>%mutate(
-  sodium_cat=if_else(sodium_cat==5,'Ref.','cat_4')
+  sodium_cat=if_else(sodium_cat==5,'0Ref','cat_4')
 )
 
 sodium_cat_6_df<-sodium_cat_6_df%>%mutate(
-  sodium_cat=if_else(sodium_cat==5,'Ref.','cat_6')
+  sodium_cat=if_else(sodium_cat==5,'0Ref','cat_6')
 )
 
 sodium_cat_7_df<-sodium_cat_7_df%>%mutate(
-  sodium_cat=if_else(sodium_cat==5,'Ref.','cat_7')
+  sodium_cat=if_else(sodium_cat==5,'0Ref','cat_7')
 )
 
 sodium_cat_8_df<-sodium_cat_8_df%>%mutate(
-  sodium_cat=if_else(sodium_cat==5,'Ref.','cat_8')
+  sodium_cat=if_else(sodium_cat==5,'0Ref','cat_8')
 )
 
 ```
