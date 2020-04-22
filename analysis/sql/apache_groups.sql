@@ -114,7 +114,7 @@ FROM
   `physionet-data.eicu_crd.patient`
 ) SELECT 
   patient.patientunitstayid, 
-  apache_groups.apachedxgroup
+  apache_groups.apachedxgroup AS AP_grp
 FROM 
   `physionet-data.eicu_crd.patient` patient
 INNER JOIN 

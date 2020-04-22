@@ -38,7 +38,7 @@ library(readr)
 ```{r}
 fit_totaleffect<-glm(as.factor(hosp_mortality)~ 
 sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+apachedxgroup
+apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp
 # apache related variables
                    , sodium_cat_1_df
 ,family = 'binomial')
@@ -54,7 +54,7 @@ OR_table
 
 ```{r}
 fit_mediator<-lm( normal_gcs ~ sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+apachedxgroup
+apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp
 # apache related variables
  
                    ,data =  sodium_cat_1_df)
@@ -67,7 +67,7 @@ summary(fit_mediator)
 ### The effect of the mediator on the the dependent variable
 
 ```{r}
-fit_dv<-glm(as.factor(hosp_mortality) ~ normal_gcs + sodium_cat +apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+apachedxgroup
+fit_dv<-glm(as.factor(hosp_mortality) ~ normal_gcs + sodium_cat +apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp
                    + mechvent_day01 
                    , sodium_cat_1_df
            ,family = 'binomial')
@@ -95,7 +95,7 @@ summary(results)
 ```{r}
 fit_totaleffect<-glm(as.factor(hosp_mortality)~ 
 sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+apachedxgroup
+apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp
 # apache related variables
                    , sodium_cat_2_df
 ,family = 'binomial')
@@ -111,7 +111,7 @@ OR_table
 
 ```{r}
 fit_mediator<-lm( normal_gcs ~ sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+apachedxgroup
+apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp
 # apache related variables
  
                    ,data =  sodium_cat_2_df)
@@ -124,7 +124,7 @@ summary(fit_mediator)
 ### The effect of the mediator on the the dependent variable
 
 ```{r}
-fit_dv<-glm(as.factor(hosp_mortality) ~ normal_gcs + sodium_cat +apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+apachedxgroup
+fit_dv<-glm(as.factor(hosp_mortality) ~ normal_gcs + sodium_cat +apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp
                    + mechvent_day01 
                    , sodium_cat_2_df
            ,family = 'binomial')
@@ -152,7 +152,7 @@ summary(results)
 ```{r}
 fit_totaleffect<-glm(as.factor(hosp_mortality)~ 
 sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+apachedxgroup
+apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp
 # apache related variables
                    , sodium_cat_3_df
 ,family = 'binomial')
@@ -168,7 +168,7 @@ OR_table
 
 ```{r}
 fit_mediator<-lm( normal_gcs ~ sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+apachedxgroup
+apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp
 # apache related variables
  
                    ,data =  sodium_cat_3_df)
@@ -181,7 +181,7 @@ summary(fit_mediator)
 ### The effect of the mediator on the the dependent variable
 
 ```{r}
-fit_dv<-glm(as.factor(hosp_mortality) ~ normal_gcs + sodium_cat +apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+apachedxgroup
+fit_dv<-glm(as.factor(hosp_mortality) ~ normal_gcs + sodium_cat +apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp
                    + mechvent_day01 
                    , sodium_cat_3_df
            ,family = 'binomial')
@@ -209,7 +209,7 @@ summary(results)
 ```{r}
 fit_totaleffect<-glm(as.factor(hosp_mortality)~ 
 sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+apachedxgroup
+apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp
 # apache related variables
                    , sodium_cat_4_df
 ,family = 'binomial')
@@ -225,7 +225,7 @@ OR_table
 
 ```{r}
 fit_mediator<-lm( normal_gcs ~ sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+apachedxgroup
+apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp
 # apache related variables
  
                    ,data =  sodium_cat_4_df)
@@ -238,7 +238,7 @@ summary(fit_mediator)
 ### The effect of the mediator on the the dependent variable
 
 ```{r}
-fit_dv<-glm(as.factor(hosp_mortality) ~ normal_gcs + sodium_cat +apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+apachedxgroup
+fit_dv<-glm(as.factor(hosp_mortality) ~ normal_gcs + sodium_cat +apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp
                    + mechvent_day01 
                    , sodium_cat_4_df
            ,family = 'binomial')
@@ -266,7 +266,7 @@ summary(results)
 ```{r}
 fit_totaleffect<-glm(as.factor(hosp_mortality)~ 
 sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+apachedxgroup
+apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp
 # apache related variables
                    , sodium_cat_6_df
 ,family = 'binomial')
@@ -282,7 +282,7 @@ OR_table
 
 ```{r}
 fit_mediator<-lm( normal_gcs ~ sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+apachedxgroup
+apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp
 # apache related variables
  
                    ,data =  sodium_cat_6_df)
@@ -295,7 +295,7 @@ summary(fit_mediator)
 ### The effect of the mediator on the the dependent variable
 
 ```{r}
-fit_dv<-glm(as.factor(hosp_mortality) ~ normal_gcs + sodium_cat +apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+apachedxgroup
+fit_dv<-glm(as.factor(hosp_mortality) ~ normal_gcs + sodium_cat +apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp
                    + mechvent_day01 
                    , sodium_cat_6_df
            ,family = 'binomial')
@@ -323,7 +323,7 @@ summary(results)
 ```{r}
 fit_totaleffect<-glm(as.factor(hosp_mortality)~ 
 sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+apachedxgroup
+apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp
 # apache related variables
                    , sodium_cat_7_df
 ,family = 'binomial')
@@ -339,7 +339,7 @@ OR_table
 
 ```{r}
 fit_mediator<-lm( normal_gcs ~ sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+apachedxgroup
+apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp
 # apache related variables
  
                    ,data =  sodium_cat_7_df)
@@ -352,7 +352,7 @@ summary(fit_mediator)
 ### The effect of the mediator on the the dependent variable
 
 ```{r}
-fit_dv<-glm(as.factor(hosp_mortality) ~ normal_gcs + sodium_cat +apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+apachedxgroup
+fit_dv<-glm(as.factor(hosp_mortality) ~ normal_gcs + sodium_cat +apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp
                    + mechvent_day01 
                    , sodium_cat_7_df
            ,family = 'binomial')
@@ -380,7 +380,7 @@ summary(results)
 ```{r}
 fit_totaleffect<-glm(as.factor(hosp_mortality)~ 
 sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+apachedxgroup
+apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp
 # apache related variables
                    , sodium_cat_8_df
 ,family = 'binomial')
@@ -396,7 +396,7 @@ OR_table
 
 ```{r}
 fit_mediator<-lm( normal_gcs ~ sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+apachedxgroup
+apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp
 # apache related variables
  
                    ,data =  sodium_cat_8_df)
@@ -409,7 +409,7 @@ summary(fit_mediator)
 ### The effect of the mediator on the the dependent variable
 
 ```{r}
-fit_dv<-glm(as.factor(hosp_mortality) ~ normal_gcs + sodium_cat +apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+apachedxgroup
+fit_dv<-glm(as.factor(hosp_mortality) ~ normal_gcs + sodium_cat +apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp
                    + mechvent_day01 
                    , sodium_cat_8_df
            ,family = 'binomial')

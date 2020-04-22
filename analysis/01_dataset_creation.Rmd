@@ -116,6 +116,7 @@ allapachevars<-allapachevars%>%mutate(
   electivesurgery=if_else(is.na(electivesurgery),0,electivesurgery)
   
 )
+apache_groups <- run_query(getSQL("sql/apache_groups.sql" ))
 
 ```
 
@@ -132,7 +133,6 @@ admission_sodium <- run_query(getSQL("sql/admission_sodium.sql" ))
 charlson_score <- run_query(getSQL("sql/charlson_score.sql" ))
 charlson_score<-charlson_score%>%select(patientunitstayid,charlson_liver1 ,charlson_chf1)
 ventilated_binary_first_day <- run_query(getSQL("sql/ventilated_binary_first_day.sql" ))
-apache_groups <- run_query(getSQL("sql/apache_groups.sql" ))
 
 ```
 
@@ -162,7 +162,7 @@ Apache variables:
 ```{r}
 selected_df<-initial_dataset%>%select(
 # initial demographics  
-patientunitstayid,sodium1,gcs_baseline,apache_iv,age,gender,ethnicity,unittype, charlson_liver1 ,charlson_chf1,mechvent_day01,apachedxgroup,
+patientunitstayid,sodium1,gcs_baseline,apache_iv,age,gender,ethnicity,unittype, charlson_liver1 ,charlson_chf1,mechvent_day01,AP_grp,
 hosp_mortality,
 # apache related variables
 intubated, vent, dialysis, eyes, motor, verbal, meds, urine, wbc, temperature, respiratoryrate, heartrate, meanbp, ph, hematocrit, creatinine, albumin, pao2, pco2, bun, glucose, bilirubin, fio2, sicuday, saps3day1, saps3today, saps3yesterday,  teachtype, region, bedcount, admitsource, graftcount,   thrombolytics, diedinhospital, aids, hepaticfailure, lymphoma, metastaticcancer, leukemia, immunosuppression, cirrhosis, electivesurgery, activetx, readmit, ima, midur, ventday1, oobventday1, oobintubday1, diabetes, managementsystem, var03hspxlos, ejectfx, dischargelocation, visitnumber, amilocation, day1meds, day1verbal, day1motor, day1eyes, day1pao2, day1fio2
