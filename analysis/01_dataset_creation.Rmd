@@ -26,6 +26,8 @@ library(htmlwidgets)
 library(readr)
 library(bigrquery)
 library(summarytools)
+library(table1)
+
 winsorize_x = function(x, cut = 0.005){
   cut_point_top <- quantile(x, 1 - cut, na.rm = T)
   cut_point_bottom <- quantile(x, cut, na.rm = T)
@@ -233,6 +235,24 @@ cat('Summary of ',colname,'\n',sep = '')
 cat(summary( selected_df[i]),'\n',sep = '|')
 }
 ```
+
+# Table 1
+
+## Stratified by mortality
+
+```{r}
+table1(~hosp_mortality + normal_gcs + sodium_cat +apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp+ mechvent_day01 | hosp_mortality,data=selected_df )
+```
+
+
+
+
+## Stratified by sodium category
+
+```{r}
+table1(~hosp_mortality + normal_gcs + sodium_cat +apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp+ mechvent_day01 | sodium_cat,data=selected_df )
+```
+
 
 # Separate Sodium bands datasets
 
