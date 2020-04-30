@@ -557,4 +557,3 @@ ggplot(data=mediation_results_filtered,aes(x=cat,y=Estimate,colour=results,fill=
   scale_x_continuous(breaks = c(1,2,3,4,6,7,8))
 ```
 
-
