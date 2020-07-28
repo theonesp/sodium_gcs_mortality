@@ -25,8 +25,10 @@ library(voxel)
 library(htmlwidgets)
 library(readr)
 library(bigrquery)
+#bq_auth() # CRITICAL!!! THIS NEEDS TO BE RUN FROM THE CONSOLE. IT WON'T WORK IF RUN FROM MARKDOWN.
 library(summarytools)
 library(table1)
+library(DBI)
 
 winsorize_x = function(x, cut = 0.005){
   cut_point_top <- quantile(x, 1 - cut, na.rm = T)
@@ -49,14 +51,13 @@ impute.median <- function(x) replace(x, is.na(x), median(x, na.rm = TRUE))
 This chunks also creates the run_query and get_sql function.
 
 ```{r setup, include=FALSE}
-# Updated for our year
-project_id <- "hst-953-2018"
-options(httr_oauth_cache=FALSE)
-# Function that takes in a sql command and runs it on bigquery
-run_query <- function(query){
-  data <- query_exec(query, project=project_id, use_legacy_sql=FALSE,max_pages = Inf)
-  return(data)
-}
+# Configure connection 
+con <- dbConnect(
+  bigrquery::bigquery(),
+  project = "hst-953-2018",
+  #dataset = "samples",
+  billing = "hst-953-2018"
+)
 
 # function for reading sql files
 getSQL <- function(filepath){
@@ -98,8 +99,9 @@ The _apachepredvar_ table provides variables underlying the APACHE predictions. 
 We are extracting all variables needed to calculate apache except sodium.
 
 ```{r}
-apacheapsvar <- run_query(getSQL("sql/apacheapsvar.sql" ))
-apachepredvar <- run_query(getSQL("sql/apachepredvar.sql" ))
+#bq_auth() # CRITICAL!!! THIS NEEDS TO BE RUN FROM THE CONSOLE. IT WON'T WORK IF RUN FROM MARKDOWN.
+apacheapsvar <- dbGetQuery(con, getSQL("sql/apacheapsvar.sql" ))
+apachepredvar <- dbGetQuery(con, getSQL("sql/apachepredvar.sql" ))
 selected_columns<-names(apachepredvar[names(apachepredvar) %!in% names(apacheapsvar)])
 selected_columns<-c('patientunitstayid',selected_columns)
 
@@ -108,33 +110,42 @@ allapachevars<-inner_join(apacheapsvar
                         ,by='patientunitstayid')
 
 # we are removing the following variables since we already have them
-allapachevars$admitdiagnosis<-NULL
 allapachevars$age<-NULL
 allapachevars$gender<-NULL
 
 
-# we are correcting the following variable
+
+# we are correcting the electivesurgery variable
 allapachevars<-allapachevars%>%mutate(
-  electivesurgery=if_else(is.na(electivesurgery),0,electivesurgery)
+  electivesurgery=as.integer(if_else(is.na(electivesurgery),'0',as.character(electivesurgery)))
   
 )
-apache_groups <- run_query(getSQL("sql/apache_groups.sql" ))
+apache_groups <- dbGetQuery(con, getSQL("sql/apache_groups.sql" ))
 
+apache_groups<-apache_groups%>%
+  mutate(
+    AP_grp=case_when(
+  # selecting only top 10 apache groups
+  AP_grp %in% c("Other","Sepsis","CardiacArrest","CVA","RespMedOther","ACS","GIBleed","CHF","Trauma","PNA") ~ AP_grp,
+  TRUE   ~ 'Other'
+  )
+
+)
 ```
 
 ### Other variables
 
 ```{r}
-basic_demographics <- run_query(getSQL("sql/basic_demographics.sql" ))
+basic_demographics <- dbGetQuery(con, getSQL("sql/basic_demographics.sql" ))
 basic_demographics<-basic_demographics%>%mutate(
+  # we are simplifying the ethnicity category
   ethnicity=if_else(ethnicity=='Caucasian','Caucasian','Not Caucasian')
 )
 
-gcs_baseline <- run_query(getSQL("sql/gcs_baseline.sql" ))
-admission_sodium <- run_query(getSQL("sql/admission_sodium.sql" ))
-charlson_score <- run_query(getSQL("sql/charlson_score.sql" ))
-charlson_score<-charlson_score%>%select(patientunitstayid,charlson_liver1 ,charlson_chf1)
-ventilated_binary_first_day <- run_query(getSQL("sql/ventilated_binary_first_day.sql" ))
+gcs_baseline <- dbGetQuery(con, getSQL("sql/gcs_baseline.sql" ))
+admission_sodium <- dbGetQuery(con, getSQL("sql/admission_sodium.sql" ))
+charlson_score <- dbGetQuery(con, getSQL("sql/charlson_score.sql" ))
+ventilated_binary_first_day <- dbGetQuery(con, getSQL("sql/ventilated_binary_first_day.sql" ))
 
 ```
 
@@ -157,20 +168,65 @@ initial_dataset<-Reduce(function(...) merge(..., all.x=TRUE), list(
 
 ## Selecting variables
 
-Apache variables:
+Basic demographics included age, gender, and ethnicity.  
+Ethnicity was self-reported as white, African American, Hispanic, Asian, Native American, Other, or Unknown.  *TODO correct in manuscript only two races*
 
- intubated, vent, dialysis, eyes, motor, verbal, meds, urine, wbc, temperature, respiratoryrate, heartrate, meanbp, ph, hematocrit, creatinine, albumin, pao2, pco2, bun, glucose, bilirubin, fio2, sicuday, saps3day1, saps3today, saps3yesterday,  teachtype, region, bedcount, admitsource, graftcount,   thrombolytics, diedinhospital, aids, hepaticfailure, lymphoma, metastaticcancer, leukemia, immunosuppression, cirrhosis, electivesurgery, activetx, readmit, ima, midur, ventday1, oobventday1, oobintubday1, diabetes, managementsystem, var03hspxlos, ejectfx, dischargelocation, visitnumber, amilocation, day1meds, day1verbal, day1motor, day1eyes, day1pao2, day1fio2
+Admission diagnoses were adjudicated by trained clinicians within the first 24 hours of ICU admission as part of the Apache scoring system(20), and were categorized into the ten most common clinical categories, including sepsis, myocardial infarction/angina, trauma, gastrointestinal bleed, arrhythmia, drug/alcohol complications, cerebrovascular accident, coronary artery bypass grafting, pneumonia, malignancy related, congestive heart failure, unknown and other. *TODO correct in manuscript new top 10 cats*
+
+A history of metastatic disease, AIDS, liver disease, stroke, renal disease, diabetes, cancer, leukemia, lymphoma, myocardial infraction, congestive heart failure, peripheral vascular disease, transient ischemic attack, dementia, chronic obstructive pulmonary diseae, connective tissue diease, and peptic ulcer disease, as adjudicated in the Charlson comorbidity scoring system were used to describe preexisting illness burden, and included as separate variables(21).  
+
+The source of admission (emergency department, floor, other hospital, direct admission, recovery unit/operating room and other), 
+
+Unit type (medical, medical surgical, surgical, cardiac, cardiothoracic, and neurological) were included as categorical variables.  
+
+Mechanical ventilation during the first 24 hours of care was included as binary variable.
 
 ```{r}
 selected_df<-initial_dataset%>%select(
 # initial demographics  
-patientunitstayid,sodium1,gcs_baseline,apache_iv,age,gender,ethnicity,unittype, charlson_liver1 ,charlson_chf1,mechvent_day01,AP_grp,
-hosp_mortality,
-# apache related variables
-intubated, vent, dialysis, eyes, motor, verbal, meds, urine, wbc, temperature, respiratoryrate, heartrate, meanbp, ph, hematocrit, creatinine, albumin, pao2, pco2, bun, glucose, bilirubin, fio2, sicuday, saps3day1, saps3today, saps3yesterday,  teachtype, region, bedcount, admitsource, graftcount,   thrombolytics, diedinhospital, aids, hepaticfailure, lymphoma, metastaticcancer, leukemia, immunosuppression, cirrhosis, electivesurgery, activetx, readmit, ima, midur, ventday1, oobventday1, oobintubday1, diabetes, managementsystem, var03hspxlos, ejectfx, dischargelocation, visitnumber, amilocation, day1meds, day1verbal, day1motor, day1eyes, day1pao2, day1fio2
-                                      )
+patientunitstayid,
+age,
+gender, 
+ethnicity, 
+hospitaladmitsource,
+unittype, 
+AP_grp,
+# comorb
+charlson_mets6,
+charlson_aids6,
+charlson_liver3,
+charlson_stroke2,
+charlson_renal2,
+charlson_dm,
+charlson_cancer2,
+charlson_leukemia2,
+charlson_lymphoma2,
+charlson_mi1,
+charlson_chf1,
+charlson_pvd1,
+charlson_tia1,
+charlson_dementia1,
+charlson_copd1,
+charlson_ctd1,
+charlson_pud1,
+charlson_liver1,
+charlson_age_score,
+#others
+mechvent_day01,
+#main
+sodium1,
+gcs_baseline,
+hosp_mortality
+)
 
+# factorizing variables
 selected_df$gender<-as.factor(selected_df$gender)
+selected_df$ethnicity<-as.factor(selected_df$ethnicity) 
+selected_df$AP_grp<-as.factor(selected_df$AP_grp)
+selected_df$unittype<-as.factor(selected_df$unittype)
+selected_df$hospitaladmitsource<-as.factor(selected_df$hospitaladmitsource)
+selected_df$mechvent_day01<-as.factor(selected_df$mechvent_day01)
+selected_df$hosp_mortality<-as.factor(selected_df$hosp_mortality)
 ```
 
 # Exclusion criteria
@@ -178,7 +234,9 @@ selected_df$gender<-as.factor(selected_df$gender)
 We are not excluding patients with a baseline sodium outside of our groups.
 
 ```{r}
+cat('initial number of patients:',nrow(selected_df))
 selected_df<- selected_df[complete.cases(selected_df),]
+cat('\nfinal number of patients:',nrow(selected_df))
 ```
 
 # Addressing basseline sodium outliers
@@ -194,7 +252,7 @@ selected_df$sodium1<-winsorize_x(selected_df$sodium1)
 ## Normal GCS
 
 ```{r}
-selected_df$normal_gcs<-if_else(selected_df$gcs_baseline==15,1,0)
+selected_df$normal_gcs<-as.factor(if_else(selected_df$gcs_baseline==15,1,0))
 ```
 
 
@@ -212,13 +270,22 @@ selected_df<-selected_df%>%mutate(
     between(sodium1,125,130) ~ '3',
     between(sodium1,130,135) ~ '4',
     between(sodium1,135,140) ~ '5', # This is the reference dataset
-    between(sodium1,140,145) ~ '6',
+    between(sodium1,140,145) ~ '6', # still normal
     between(sodium1,145,150) ~ '7',
     sodium1>= 150 ~ '8',
     
   )
 )
+
+selected_df$sodium_cat<-as.factor(selected_df$sodium_cat)
 ```
+
+# Dataset Export
+
+```{r}
+saveRDS(selected_df,file=paste('sodium_gcs_mediation_',Sys.Date(),'.Rds'))
+```
+
 
 # Studying initial variables distribution
 
@@ -241,11 +308,8 @@ cat(summary( selected_df[i]),'\n',sep = '|')
 ## Stratified by mortality
 
 ```{r}
-table1(~hosp_mortality + normal_gcs + sodium_cat +apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp+ mechvent_day01 | hosp_mortality,data=selected_df )
+table1(~age+gender + normal_gcs + sodium_cat +ethnicity + unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp+ mechvent_day01 | hosp_mortality,data=selected_df )
 ```
-
-
-
 
 ## Stratified by sodium category
 

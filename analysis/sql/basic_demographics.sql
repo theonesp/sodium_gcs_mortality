@@ -13,13 +13,19 @@ WITH
     basic_demographics.hosp_mortality,
     icustay_detail.unittype,
     icustay_detail.apache_iv,
-    icustay_detail.ethnicity
+    icustay_detail.ethnicity,
+    patient.hospitaladmitsource
   FROM
     `physionet-data.eicu_crd_derived.basic_demographics` basic_demographics
   INNER JOIN
     `physionet-data.eicu_crd_derived.icustay_detail` icustay_detail
   USING
-    (patientunitstayid) )
+    (patientunitstayid) 
+  LEFT JOIN
+    `physionet-data.eicu_crd.patient` patient  
+  USING
+    (patientunitstayid) 
+    )
 SELECT
   patientunitstayid,
   age,
@@ -27,7 +33,8 @@ SELECT
   hosp_mortality,
   unittype,
   apache_iv,
-  ethnicity
+  ethnicity,
+  hospitaladmitsource
 FROM
   sq
 WHERE
