@@ -7,7 +7,7 @@ output: html_document
 
 # Environment
 
-```{r message=FALSE, warning=FALSE}
+```{r message=FALSE, warning=FALSE,echo = F}
 library(dplyr)
 library(ggplot2)
 library(mediation)
@@ -20,6 +20,7 @@ library(stringi)
 library(mediation)
 library(glmnet)
 library(data.table)
+library(table1)
 '%!in%' <- function(x,y)!('%in%'(x,y))
 extract_mediation_summary <- function (x) { 
 
@@ -66,14 +67,23 @@ extract_mediation_summary <- function (x) {
 
 }
 
-sodium_cat_1_df<-fread("/Users/sichenghao/Documents/GitHub/sodium_gcs_mortality/data/g1.csv")
-sodium_cat_2_df<-fread("/Users/sichenghao/Documents/GitHub/sodium_gcs_mortality//data/g2.csv")
-sodium_cat_3_df<-fread("/Users/sichenghao/Documents/GitHub/sodium_gcs_mortality//data/g3.csv")
-sodium_cat_4_df<-fread("/Users/sichenghao/Documents/GitHub/sodium_gcs_mortality//data/g4.csv")
-sodium_cat_5_df<-fread("/Users/sichenghao/Documents/GitHub/sodium_gcs_mortality//data/g5.csv")
-sodium_cat_6_df<-fread("/Users/sichenghao/Documents/GitHub/sodium_gcs_mortality//data/g6.csv")
-sodium_cat_7_df<-fread("/Users/sichenghao/Documents/GitHub/sodium_gcs_mortality//data/g7.csv")
-sodium_cat_8_df<-fread("/Users/sichenghao/Documents/GitHub/sodium_gcs_mortality//data/g8.csv")
+data<-readRDS("sodium_gcs_mediation_ 2020-07-28 .Rds")
+data$gender<-ifelse(data$gender==1,"male","female")
+data$hosp_mortality<-ifelse(data$hosp_mortality==1,"Died","Alive")
+data$normal_gcs<-ifelse(data$normal_gcs==1,"Normal GCS","GCS<15")
+sodium_cat_1_df<-data%>%filter(sodium_cat%in%c(1,5))
+sodium_cat_2_df<-data%>%filter(sodium_cat%in%c(2,5))
+sodium_cat_3_df<-data%>%filter(sodium_cat%in%c(3,5))
+sodium_cat_4_df<-data%>%filter(sodium_cat%in%c(4,5))
+#sodium_cat_5_df<-data%>%filter(sodium_cat==5)
+sodium_cat_6_df<-data%>%filter(sodium_cat%in%c(6,5))
+sodium_cat_7_df<-data%>%filter(sodium_cat%in%c(7,5))
+sodium_cat_8_df<-data%>%filter(sodium_cat%in%c(8,5))
+```
+
+## Table 1:
+```{r,echo = F}
+table1(~sodium_cat + age + gender + AP_grp +ethnicity + AP_grp + mechvent_day01 + unittype + as.factor(charlson_chf1) + as.factor(charlson_liver1)|normal_gcs+hosp_mortality,data = data)
 ```
 
 # Mediation package
@@ -85,18 +95,20 @@ sodium_cat_8_df<-fread("/Users/sichenghao/Documents/GitHub/sodium_gcs_mortality/
 
 ## Mediation analysis: Baseline sodium_cat_1
 
-```{r}
+```{r,echo = F}
 
-fit_totaleffect<-glm(as.factor(hosp_mortality)~gcs_baseline+age+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+dialysis+urine+wbc+temperature+respiratoryrate+heartrate+meanbp+ ph+hematocrit+creatinine+albumin+albumin+pco2+bun+glucose+bilirubin+day1meds+day1pao2+day1fio2
+fit_totaleffect<-glm(as.factor(hosp_mortality)~normal_gcs+AP_grp+age+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
 # apache related variables
                    , sodium_cat_1_df
 ,family = binomial("probit"))
+
+
 summary(fit_totaleffect)
 
-fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+dialysis+urine+wbc+temperature+respiratoryrate+heartrate+meanbp+ ph+hematocrit+creatinine+albumin+albumin+pco2+bun+glucose+bilirubin+day1meds+day1pao2+day1fio2,
+fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01,
 data =  sodium_cat_1_df)
 
-fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+dialysis+urine+wbc+temperature+respiratoryrate+heartrate+meanbp+ ph+hematocrit+creatinine+albumin+albumin+pco2+bun+glucose+bilirubin+day1meds+day1pao2+day1fio2
+fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
                    , sodium_cat_1_df
            ,family = binomial("probit"))
 summary(fit_dv)
@@ -112,18 +124,18 @@ mediation_results_cat1_sum<-mediation_results_cat1_sum[grepl("treated|Total Effe
 
 ## Mediation analysis: Baseline sodium_cat_2
 
-```{r}
+```{r,echo = F}
 
-fit_totaleffect<-glm(as.factor(hosp_mortality)~gcs_baseline+age+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+dialysis+urine+wbc+temperature+respiratoryrate+heartrate+meanbp+ ph+hematocrit+creatinine+albumin+albumin+pco2+bun+glucose+bilirubin+day1meds+day1pao2+day1fio2
+fit_totaleffect<-glm(as.factor(hosp_mortality)~gcs_baseline+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
 # apache related variables
                    , sodium_cat_2_df
 ,family = binomial("probit"))
 summary(fit_totaleffect)
 
-fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+dialysis+urine+wbc+temperature+respiratoryrate+heartrate+meanbp+ ph+hematocrit+creatinine+albumin+albumin+pco2+bun+glucose+bilirubin+day1meds+day1pao2+day1fio2,
+fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01,
 data =  sodium_cat_2_df)
 
-fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+dialysis+urine+wbc+temperature+respiratoryrate+heartrate+meanbp+ ph+hematocrit+creatinine+albumin+albumin+pco2+bun+glucose+bilirubin+day1meds+day1pao2+day1fio2
+fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
                    , sodium_cat_2_df
            ,family = binomial("probit"))
 summary(fit_dv)
@@ -139,18 +151,18 @@ mediation_results_cat2_sum<-mediation_results_cat2_sum[grepl("treated|Total Effe
 
 ## Mediation analysis: Baseline sodium_cat_3
 
-```{r}
+```{r,echo = F}
 
-fit_totaleffect<-glm(as.factor(hosp_mortality)~gcs_baseline+age+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+dialysis+urine+wbc+temperature+respiratoryrate+heartrate+meanbp+ ph+hematocrit+creatinine+albumin+albumin+pco2+bun+glucose+bilirubin+day1meds+day1pao2+day1fio2
+fit_totaleffect<-glm(as.factor(hosp_mortality)~gcs_baseline+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
 # apache related variables
                    , sodium_cat_3_df
 ,family = binomial("probit"))
 summary(fit_totaleffect)
 
-fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+dialysis+urine+wbc+temperature+respiratoryrate+heartrate+meanbp+ ph+hematocrit+creatinine+albumin+albumin+pco2+bun+glucose+bilirubin+day1meds+day1pao2+day1fio2,
+fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01,
 data =  sodium_cat_3_df)
 
-fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+dialysis+urine+wbc+temperature+respiratoryrate+heartrate+meanbp+ ph+hematocrit+creatinine+albumin+albumin+pco2+bun+glucose+bilirubin+day1meds+day1pao2+day1fio2
+fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
                    , sodium_cat_3_df
            ,family = binomial("probit"))
 summary(fit_dv)
@@ -166,18 +178,18 @@ mediation_results_cat3_sum<-mediation_results_cat3_sum[grepl("treated|Total Effe
 
 ## Mediation analysis: Baseline sodium_cat_4
 
-```{r}
+```{r,echo = F}
 
-fit_totaleffect<-glm(as.factor(hosp_mortality)~gcs_baseline+age+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+dialysis+urine+wbc+temperature+respiratoryrate+heartrate+meanbp+ ph+hematocrit+creatinine+albumin+albumin+pco2+bun+glucose+bilirubin+day1meds+day1pao2+day1fio2
+fit_totaleffect<-glm(as.factor(hosp_mortality)~gcs_baseline+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
 # apache related variables
                    , sodium_cat_4_df
 ,family = binomial("probit"))
 summary(fit_totaleffect)
 
-fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+dialysis+urine+wbc+temperature+respiratoryrate+heartrate+meanbp+ ph+hematocrit+creatinine+albumin+albumin+pco2+bun+glucose+bilirubin+day1meds+day1pao2+day1fio2,
+fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01,
 data =  sodium_cat_4_df)
 
-fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+dialysis+urine+wbc+temperature+respiratoryrate+heartrate+meanbp+ ph+hematocrit+creatinine+albumin+albumin+pco2+bun+glucose+bilirubin+day1meds+day1pao2+day1fio2
+fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
                    , sodium_cat_4_df
            ,family = binomial("probit"))
 summary(fit_dv)
@@ -193,18 +205,18 @@ mediation_results_cat4_sum<-mediation_results_cat4_sum[grepl("treated|Total Effe
 
 ## Mediation analysis: Baseline sodium_cat_6
 
-```{r}
+```{r,echo = F}
 
-fit_totaleffect<-glm(as.factor(hosp_mortality)~gcs_baseline+age+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+dialysis+urine+wbc+temperature+respiratoryrate+heartrate+meanbp+ ph+hematocrit+creatinine+albumin+albumin+pco2+bun+glucose+bilirubin+day1meds+day1pao2+day1fio2
+fit_totaleffect<-glm(as.factor(hosp_mortality)~gcs_baseline+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
 # apache related variables
                    , sodium_cat_6_df
 ,family = binomial("probit"))
 summary(fit_totaleffect)
 
-fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+dialysis+urine+wbc+temperature+respiratoryrate+heartrate+meanbp+ ph+hematocrit+creatinine+albumin+albumin+pco2+bun+glucose+bilirubin+day1meds+day1pao2+day1fio2,
+fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01,
 data =  sodium_cat_6_df)
 
-fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+dialysis+urine+wbc+temperature+respiratoryrate+heartrate+meanbp+ ph+hematocrit+creatinine+albumin+albumin+pco2+bun+glucose+bilirubin+day1meds+day1pao2+day1fio2
+fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
                    , sodium_cat_6_df
            ,family = binomial("probit"))
 summary(fit_dv)
@@ -220,18 +232,18 @@ mediation_results_cat6_sum<-mediation_results_cat6_sum[grepl("treated|Total Effe
 
 ## Mediation analysis: Baseline sodium_cat_7
 
-```{r}
+```{r,echo = F}
 
-fit_totaleffect<-glm(as.factor(hosp_mortality)~gcs_baseline+age+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+dialysis+urine+wbc+temperature+respiratoryrate+heartrate+meanbp+ ph+hematocrit+creatinine+albumin+albumin+pco2+bun+glucose+bilirubin+day1meds+day1pao2+day1fio2
+fit_totaleffect<-glm(as.factor(hosp_mortality)~gcs_baseline+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
 # apache related variables
                    , sodium_cat_7_df
 ,family = binomial("probit"))
 summary(fit_totaleffect)
 
-fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+dialysis+urine+wbc+temperature+respiratoryrate+heartrate+meanbp+ ph+hematocrit+creatinine+albumin+albumin+pco2+bun+glucose+bilirubin+day1meds+day1pao2+day1fio2,
+fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01,
 data =  sodium_cat_7_df)
 
-fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+dialysis+urine+wbc+temperature+respiratoryrate+heartrate+meanbp+ ph+hematocrit+creatinine+albumin+albumin+pco2+bun+glucose+bilirubin+day1meds+day1pao2+day1fio2
+fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
                    , sodium_cat_7_df
            ,family = binomial("probit"))
 summary(fit_dv)
@@ -248,18 +260,18 @@ mediation_results_cat7_sum<-mediation_results_cat7_sum[grepl("treated|Total Effe
 
 ## Mediation analysis: Baseline sodium_cat_8
 
-```{r}
+```{r,echo = F}
 
-fit_totaleffect<-glm(as.factor(hosp_mortality)~gcs_baseline+age+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+dialysis+urine+wbc+temperature+respiratoryrate+heartrate+meanbp+ ph+hematocrit+creatinine+albumin+albumin+pco2+bun+glucose+bilirubin+day1meds+day1pao2+day1fio2
+fit_totaleffect<-glm(as.factor(hosp_mortality)~gcs_baseline+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
 # apache related variables
                    , sodium_cat_8_df
 ,family = binomial("probit"))
 summary(fit_totaleffect)
 
-fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+dialysis+urine+wbc+temperature+respiratoryrate+heartrate+meanbp+ ph+hematocrit+creatinine+albumin+albumin+pco2+bun+glucose+bilirubin+day1meds+day1pao2+day1fio2,
+fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01,
 data =  sodium_cat_8_df)
 
-fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+dialysis+urine+wbc+temperature+respiratoryrate+heartrate+meanbp+ ph+hematocrit+creatinine+albumin+albumin+pco2+bun+glucose+bilirubin+day1meds+day1pao2+day1fio2
+fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
                    , sodium_cat_8_df
            ,family = binomial("probit"))
 summary(fit_dv)
@@ -282,7 +294,7 @@ mediation_results_cat8_sum<-mediation_results_cat8_sum[grepl("treated|Total Effe
  - *Total Effect* the Total Effect (direct + indirect) of the IV on the Outcome.
  - *Prop. Mediated* describes the proportion of the effect of the IV on the Outcome that goes through the mediator. It’s calculated by dividing the ACME through the total effect.
 
-```{r}
+```{r,echo = F}
 # we want to be able to know which dataset our results are coming from
 mediation_results_cat1_sum$cat<-1
 mediation_results_cat1_sum$results<-stri_replace_all_fixed(rownames(mediation_results_cat1_sum),'(treated)',"" )
@@ -317,7 +329,7 @@ rownames(mediation_results_all)<-NULL
 
 #Prop. Mediated
 
-```{r}
+```{r,echo = F}
 mediation_results_filtered<-mediation_results_all%>% filter(results %in% c('Prop. Mediated '))
 
 ggplot(data=mediation_results_filtered,aes(x=cat,y=Estimate,colour=results,fill=results))+
@@ -340,7 +352,7 @@ ggplot(data=mediation_results_filtered,aes(x=cat,y=Estimate,colour=results,fill=
 
 ### Indirect Effect
 
-```{r}
+```{r,echo = F}
 mediation_results_filtered<-mediation_results_all%>% filter(results %in% c('ACME '))
 
 ggplot(data=mediation_results_filtered,aes(x=cat,y=Estimate,colour=results,fill=results))+
@@ -364,7 +376,7 @@ ggplot(data=mediation_results_filtered,aes(x=cat,y=Estimate,colour=results,fill=
 
 #Direct Effect
 
-```{r}
+```{r,echo = F}
 mediation_results_filtered<-mediation_results_all%>% filter(results %in% c('ADE '))
 
 ggplot(data=mediation_results_filtered,aes(x=cat,y=Estimate,colour=results,fill=results))+
@@ -386,7 +398,7 @@ ggplot(data=mediation_results_filtered,aes(x=cat,y=Estimate,colour=results,fill=
 ```
 #Total Effect
 
-```{r}
+```{r,echo = F}
 mediation_results_filtered<-mediation_results_all%>% filter(results %in% c('Total Effect'))
 
 ggplot(data=mediation_results_filtered,aes(x=cat,y=Estimate,colour=results,fill=results))+
