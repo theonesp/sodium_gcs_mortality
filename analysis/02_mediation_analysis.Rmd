@@ -394,53 +394,6 @@ p1<-ggplot(data=mediation_results_total_effect,aes(x=cat,y=Estimate,colour=resul
 
 mediation_results_propmediated<-mediation_results_all%>%filter(results %in% c("Prop. Mediated ") ) 
 
-p2<-ggplot(data=mediation_results_propmediated,aes(x=cat,y=Estimate,colour=results,fill=results))+
-    geom_point()+
-    geom_line()+
-    geom_ribbon(   data=mediation_results_propmediated
-                  ,aes(x=cat,ymin=`95% CI Lower`,ymax=`95% CI Upper`,fill=results)
-                  ,alpha=0.3
-                  ,inherit.aes=F
-                  ,width=0.2)+
-    xlab('Baseline Sodium Category')+
-    ylab('%')+
-    scale_color_manual(labels = c("Proportion Mediated"), values = c("#f1c40f"))+
-    scale_fill_manual(labels = c("Proportion Mediated"), values = c("#f1c40f"))+
-    labs(colour='Metric', fill='Metric') +
-    theme_minimal()+
-  ggtitle('Proportion Mediated')+
-  scale_x_continuous(breaks = c(1,2,3,4,6,7,8)) 
-
-plot_grid(p2, p1, scale = c(1, 1),ncol = 1, align = "v")
-```
-
-## Prop. Mediated + Total Effect
-
-```{r fig.height=9, fig.width=7}
-mediation_results_total_effect<-mediation_results_all%>%filter(results %in% c("Total Effect" ) )
-
-mediation_results_total_effect[,c(1,2,3)]<-exp(mediation_results_total_effect[,c(1,2,3)])
-
-
-p1<-ggplot(data=mediation_results_total_effect,aes(x=cat,y=Estimate,colour=results,fill=results))+
-    geom_point()+
-    geom_line()+
-    geom_ribbon(   data=mediation_results_total_effect
-                  ,aes(x=cat,ymin=`95% CI Lower`,ymax=`95% CI Upper`,fill=results)
-                  ,alpha=0.3
-                  ,inherit.aes=F
-                  ,width=0.2)+
-    xlab('Baseline Sodium Category')+
-    ylab('Odds Ratio')+
-    scale_color_manual(labels = c("Total Effect"), values = c("#1abc9c"))+
-    scale_fill_manual(labels = c("Total Effect"), values = c("#1abc9c"))+
-    labs(colour='Metric', fill='Metric') +
-    theme_minimal()+
-  ggtitle('Total Effect')+
-  scale_x_continuous(breaks = c(1,2,3,4,6,7,8)) 
-
-mediation_results_propmediated<-mediation_results_all%>%filter(results %in% c("Prop. Mediated ") ) 
-
 p2<-ggplot(data=mediation_results_propmediated,aes(x=cat,y=Estimate*100,fill=results))+
     geom_area()+
     xlab('Baseline Sodium Category')+
