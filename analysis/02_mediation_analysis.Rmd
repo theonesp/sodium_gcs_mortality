@@ -76,7 +76,9 @@ extract_mediation_summary <- function (x) {
  - *Total Effect* the Total Effect (direct + indirect) of the IV on the Outcome.
  - *Prop. Mediated* describes the proportion of the effect of the IV on the Outcome that goes through the mediator. It’s calculated by dividing the ACME through the total effect.
 
-## Mediation analysis: Baseline sodium_cat_1
+## Baseline sodium_cat_1
+
+### Mediation analysis
 
 ```{r}
 fit_totaleffect<-glm(as.factor(hosp_mortality)~normal_gcs+AP_grp+age+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
@@ -103,7 +105,16 @@ mediation_results_cat1_sum<-mediation_results_cat1_sum[grepl("treated|Total Effe
 mediation_results_cat1_sum
 ```
 
-## Mediation analysis: Baseline sodium_cat_2
+### Sensitivity Analisys
+
+```{r}
+sens.out <- medsens(mediation_results_cat1, rho.by = 0.1, effect.type = "indirect", sims = 100)
+summary(sens.out)
+```
+
+## Baseline sodium_cat_2
+
+### Mediation analysis
 
 ```{r}
 fit_totaleffect<-glm(as.factor(hosp_mortality)~gcs_baseline+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
@@ -125,7 +136,16 @@ mediation_results_cat2_sum<-mediation_results_cat2_sum[grepl("treated|Total Effe
 mediation_results_cat2_sum
 ```
 
-## Mediation analysis: Baseline sodium_cat_3
+### Sensitivity Analisys
+
+```{r}
+sens.out <- medsens(mediation_results_cat2, rho.by = 0.1, effect.type = "indirect", sims = 100)
+summary(sens.out)
+```
+
+## Baseline sodium_cat_3
+
+### Mediation analysis
 
 ```{r}
 fit_totaleffect<-glm(as.factor(hosp_mortality)~gcs_baseline+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
@@ -147,7 +167,16 @@ mediation_results_cat3_sum<-mediation_results_cat3_sum[grepl("treated|Total Effe
 mediation_results_cat3_sum
 ```
 
-## Mediation analysis: Baseline sodium_cat_4
+### Sensitivity Analisys
+
+```{r}
+sens.out <- medsens(mediation_results_cat3, rho.by = 0.1, effect.type = "indirect", sims = 100)
+summary(sens.out)
+```
+
+## Baseline sodium_cat_4
+
+### Mediation analysis
 
 ```{r}
 fit_totaleffect<-glm(as.factor(hosp_mortality)~gcs_baseline+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
@@ -169,7 +198,15 @@ mediation_results_cat4_sum
 
 ```
 
-## Mediation analysis: Baseline sodium_cat_6
+### Sensitivity Analisys
+
+```{r}
+sens.out <- medsens(mediation_results_cat4, rho.by = 0.1, effect.type = "indirect", sims = 100)
+summary(sens.out)
+```
+## Baseline sodium_cat_6
+
+### Mediation analysis
 
 ```{r}
 fit_totaleffect<-glm(as.factor(hosp_mortality)~gcs_baseline+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
@@ -190,7 +227,16 @@ mediation_results_cat6_sum<-mediation_results_cat6_sum[grepl("treated|Total Effe
 mediation_results_cat6_sum
 ```
 
-## Mediation analysis: Baseline sodium_cat_7
+### Sensitivity Analisys
+
+```{r}
+sens.out <- medsens(mediation_results_cat6, rho.by = 0.1, effect.type = "indirect", sims = 100)
+summary(sens.out)
+```
+
+## Baseline sodium_cat_7
+
+### Mediation analysis
 
 ```{r}
 fit_totaleffect<-glm(as.factor(hosp_mortality)~gcs_baseline+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
@@ -211,8 +257,16 @@ mediation_results_cat7_sum<-mediation_results_cat7_sum[grepl("treated|Total Effe
 mediation_results_cat7_sum
 ```
 
+### Sensitivity Analisys
 
-## Mediation analysis: Baseline sodium_cat_8
+```{r}
+sens.out <- medsens(mediation_results_cat7, rho.by = 0.1, effect.type = "indirect", sims = 100)
+summary(sens.out)
+```
+
+## Baseline sodium_cat_8
+
+### Mediation analysis
 
 ```{r}
 fit_totaleffect<-glm(as.factor(hosp_mortality)~gcs_baseline+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
@@ -231,6 +285,13 @@ mediation_results_cat8 <- mediate(fit_mediator, fit_dv, treat="sodium_cat", medi
 mediation_results_cat8_sum<-as.data.frame(extract_mediation_summary(mediation_results_cat8))
 mediation_results_cat8_sum<-mediation_results_cat8_sum[grepl("treated|Total Effect", rownames(mediation_results_cat8_sum)), ]
 mediation_results_cat8_sum
+```
+
+### Sensitivity Analisys
+
+```{r}
+sens.out <- medsens(mediation_results_cat8, rho.by = 0.1, effect.type = "indirect", sims = 100)
+summary(sens.out)
 ```
 
 # Ploting results
@@ -407,3 +468,12 @@ p2<-ggplot(data=mediation_results_propmediated,aes(x=cat,y=Estimate*100,fill=res
 
 plot_grid(p2, p1, scale = c(1, 1),ncol = 1, align = "v")
 ```
+
+
+# Sensitivity Analisys
+
+```{r}
+sens.out <- medsens(med.out, rho.by = 0.1, effect.type = "indirect", sims = 100)
+summary(sens.out)
+```
+
