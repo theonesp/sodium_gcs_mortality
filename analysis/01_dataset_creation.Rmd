@@ -16,19 +16,24 @@ knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = e
 # Environment
 
 ```{r message=FALSE, warning=FALSE}
-library(dplyr)
-library(ggplot2)
-library(mediation)
-library(mgcv)
-library(plotly)
-library(voxel)
-library(htmlwidgets)
-library(readr)
 library(bigrquery)
-#bq_auth() # CRITICAL!!! THIS NEEDS TO BE RUN FROM THE CONSOLE. IT WON'T WORK IF RUN FROM MARKDOWN.
 library(summarytools)
+library(readr)
+library(stringr)
+library(sqldf)
+library(dplyr)
+library(tableone)
+library(Hmisc)
+library(caret)
+library(plotly)
 library(table1)
-library(DBI)
+library(Amelia)
+library( ggpubr)
+options(scipen=999)
+
+# useful functions
+impute.median <- function(x) replace(x, is.na(x), median(x, na.rm = TRUE))
+'%!in%' <- function(x,y)!('%in%'(x,y))
 
 winsorize_x = function(x, cut = 0.005){
   cut_point_top <- quantile(x, 1 - cut, na.rm = T)
@@ -40,8 +45,6 @@ winsorize_x = function(x, cut = 0.005){
   return(x)
 }
 
-'%!in%' <- function(x,y)!('%in%'(x,y))
-impute.median <- function(x) replace(x, is.na(x), median(x, na.rm = TRUE))
 ```
 
 # Data Load
@@ -51,13 +54,14 @@ impute.median <- function(x) replace(x, is.na(x), median(x, na.rm = TRUE))
 This chunks also creates the run_query and get_sql function.
 
 ```{r setup, include=FALSE}
-# Configure connection 
-con <- dbConnect(
-  bigrquery::bigquery(),
-  project = "hst-953-2018",
-  #dataset = "samples",
-  billing = "hst-953-2018"
-)
+# Updated for our year
+project_id <- "hst-953-2018"
+options(httr_oauth_cache=FALSE)
+# Function that takes in a sql command and runs it on bigquery
+run_query <- function(query){
+  data <- query_exec(query, project=project_id, use_legacy_sql=FALSE,max_pages = Inf)
+  return(data)
+}
 
 # function for reading sql files
 getSQL <- function(filepath){
@@ -83,7 +87,6 @@ getSQL <- function(filepath){
   close(con)
   return(sql.string)
 }
-
 ```
 
 ## SQL Extraction
@@ -99,9 +102,10 @@ The _apachepredvar_ table provides variables underlying the APACHE predictions. 
 We are extracting all variables needed to calculate apache except sodium.
 
 ```{r}
+options(scipen = 20) # bigquery was producing an error that can be fixed with this command.
 #bq_auth() # CRITICAL!!! THIS NEEDS TO BE RUN FROM THE CONSOLE. IT WON'T WORK IF RUN FROM MARKDOWN.
-apacheapsvar <- dbGetQuery(con, getSQL("sql/apacheapsvar.sql" ))
-apachepredvar <- dbGetQuery(con, getSQL("sql/apachepredvar.sql" ))
+apacheapsvar <- run_query( getSQL("../sql/apacheapsvar.sql" ))
+apachepredvar <- run_query( getSQL("../sql/apachepredvar.sql" ))
 selected_columns<-names(apachepredvar[names(apachepredvar) %!in% names(apacheapsvar)])
 selected_columns<-c('patientunitstayid',selected_columns)
 
@@ -120,7 +124,7 @@ allapachevars<-allapachevars%>%mutate(
   electivesurgery=as.integer(if_else(is.na(electivesurgery),'0',as.character(electivesurgery)))
   
 )
-apache_groups <- dbGetQuery(con, getSQL("sql/apache_groups.sql" ))
+apache_groups <- run_query( getSQL("../sql/apache_groups.sql" ))
 
 apache_groups<-apache_groups%>%
   mutate(
@@ -136,16 +140,16 @@ apache_groups<-apache_groups%>%
 ### Other variables
 
 ```{r}
-basic_demographics <- dbGetQuery(con, getSQL("sql/basic_demographics.sql" ))
+basic_demographics <- run_query( getSQL("../sql/basic_demographics.sql" ))
 basic_demographics<-basic_demographics%>%mutate(
   # we are simplifying the ethnicity category
   ethnicity=if_else(ethnicity=='Caucasian','Caucasian','Not Caucasian')
 )
 
-gcs_baseline <- dbGetQuery(con, getSQL("sql/gcs_baseline.sql" ))
-admission_sodium <- dbGetQuery(con, getSQL("sql/admission_sodium.sql" ))
-charlson_score <- dbGetQuery(con, getSQL("sql/charlson_score.sql" ))
-ventilated_binary_first_day <- dbGetQuery(con, getSQL("sql/ventilated_binary_first_day.sql" ))
+gcs_baseline <- run_query( getSQL("../sql/gcs_baseline.sql" ))
+admission_sodium <- run_query( getSQL("../sql/admission_sodium.sql" ))
+charlson_score <- run_query( getSQL("../sql/charlson_score.sql" ))
+ventilated_binary_first_day <- run_query( getSQL("../sql/ventilated_binary_first_day.sql" ))
 
 ```
 
@@ -213,6 +217,7 @@ charlson_liver1,
 charlson_age_score,
 #others
 mechvent_day01,
+dialysis,
 #main
 sodium1,
 gcs_baseline,
@@ -286,38 +291,6 @@ selected_df$sodium_cat<-as.factor(selected_df$sodium_cat)
 saveRDS(selected_df,file=paste('sodium_gcs_mediation_',Sys.Date(),'.Rds'))
 ```
 
-
-# Studying initial variables distribution
-
-```{r}
-par(mfrow=c(1,2))
-for (i in 1:ncol( selected_df)) {
-colname<-names( selected_df[i])  
-ifelse( nrow(unique( selected_df[i]))<30  
-        ,barplot(table( selected_df[i]),main=colname,xlab=colname)
-        ,hist(as.numeric(unlist( selected_df[,i]))
-        ,main = paste("Histogram of" ,colname),xlab=colname)
-         )
-cat('Summary of ',colname,'\n',sep = '')  
-cat(summary( selected_df[i]),'\n',sep = '|')
-}
-```
-
-# Table 1
-
-## Stratified by mortality
-
-```{r}
-table1(~age+gender + normal_gcs + sodium_cat +ethnicity + unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp+ mechvent_day01 | hosp_mortality,data=selected_df )
-```
-
-## Stratified by sodium category
-
-```{r}
-table1(~hosp_mortality + normal_gcs + sodium_cat +apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01+AP_grp+ mechvent_day01 | sodium_cat,data=selected_df )
-```
-
-
 # Separate Sodium bands datasets
 
 ## Creating the subsets
@@ -329,7 +302,7 @@ sodium_split <- split( selected_df,  selected_df$sodium_cat)
 ## Storing every subset in a different dataset
 
 ```{r}
-for (i in c(1:max(selected_df$sodium_cat))){ 
+for (i in c(1:n_distinct(selected_df$sodium_cat))){ 
 assign( paste('sodium_cat_',i,'_df',sep=''), sodium_split[[i]])
   }
 ```

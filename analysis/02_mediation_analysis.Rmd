@@ -1,6 +1,6 @@
 ---
-title: "Sodium GCS Mediation Mortality"
-author: Miguel Ángel Armengol de la Hoz
+title: "Sodium GCS Mediation Mortality (Analysis)"
+author: "Sicheng, Miguel"
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output:
   html_notebook:
@@ -15,7 +15,8 @@ knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = e
 
 # Environment
 
-```{r message=FALSE, warning=FALSE}
+```{r message=FALSE, warning=FALSE,echo = F}
+
 library(dplyr)
 library(ggplot2)
 library(mediation)
@@ -25,27 +26,26 @@ library(voxel)
 library(htmlwidgets)
 library(readr)
 library(stringi)
+library(mediation)
+library(glmnet)
+library(data.table)
+library(table1)
+library(cowplot)
 '%!in%' <- function(x,y)!('%in%'(x,y))
 extract_mediation_summary <- function (x) { 
-
   clp <- 100 * x$conf.level
   isLinear.y <- ((class(x$model.y)[1] %in% c("lm", "rq")) || 
                    (inherits(x$model.y, "glm") && x$model.y$family$family == 
                       "gaussian" && x$model.y$family$link == "identity") || 
                    (inherits(x$model.y, "survreg") && x$model.y$dist == 
                       "gaussian"))
-
   printone <- !x$INT && isLinear.y
-
   if (printone) {
-
     smat <- c(x$d1, x$d1.ci, x$d1.p)
     smat <- rbind(smat, c(x$z0, x$z0.ci, x$z0.p))
     smat <- rbind(smat, c(x$tau.coef, x$tau.ci, x$tau.p))
     smat <- rbind(smat, c(x$n0, x$n0.ci, x$n0.p))
-
     rownames(smat) <- c("ACME", "ADE", "Total Effect", "Prop. Mediated")
-
   } else {
     smat <- c(x$d0, x$d0.ci, x$d0.p)
     smat <- rbind(smat, c(x$d1, x$d1.ci, x$d1.p))
@@ -57,20 +57,17 @@ extract_mediation_summary <- function (x) {
     smat <- rbind(smat, c(x$d.avg, x$d.avg.ci, x$d.avg.p))
     smat <- rbind(smat, c(x$z.avg, x$z.avg.ci, x$z.avg.p))
     smat <- rbind(smat, c(x$n.avg, x$n.avg.ci, x$n.avg.p))
-
     rownames(smat) <- c("ACME (control)", "ACME (treated)", 
                         "ADE (control)", "ADE (treated)", "Total Effect", 
                         "Prop. Mediated (control)", "Prop. Mediated (treated)", 
                         "ACME (average)", "ADE (average)", "Prop. Mediated (average)")
-
   }
-
   colnames(smat) <- c("Estimate", paste(clp, "% CI Lower", sep = ""), 
                       paste(clp, "% CI Upper", sep = ""), "p-value")
   smat
-
 }
 ```
+
 
 # Mediation package
 
@@ -79,420 +76,161 @@ extract_mediation_summary <- function (x) {
  - *Total Effect* the Total Effect (direct + indirect) of the IV on the Outcome.
  - *Prop. Mediated* describes the proportion of the effect of the IV on the Outcome that goes through the mediator. It’s calculated by dividing the ACME through the total effect.
 
-# Binary Baseline GCS analysis
-
 ## Mediation analysis: Baseline sodium_cat_1
 
-### The total effect
-
 ```{r}
-fit_totaleffect<-glm(as.factor(hosp_mortality)~ 
-sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01
-# apache related variables
+fit_totaleffect<-glm(as.factor(hosp_mortality)~normal_gcs+AP_grp+age+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
+
                    , sodium_cat_1_df
-,family = 'binomial')
+,family = binomial("probit"))
 summary(fit_totaleffect)
 
-OR_table<-as.data.frame(round(exp(cbind(OR=coef(fit_totaleffect), confint.default(fit_totaleffect))),2))
+fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01,
+data =  sodium_cat_1_df)
 
-OR_table
-
-```
-
-### The effect of the baseline sodium onto the mediator
-
-```{r}
-fit_mediator<-lm( normal_gcs ~ sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01
-# apache related variables
- 
-                   ,data =  sodium_cat_1_df)
-
-
-summary(fit_mediator)
-
-```
-
-### The effect of the mediator on the the dependent variable
-
-```{r}
-fit_dv<-glm(as.factor(hosp_mortality) ~ normal_gcs + sodium_cat +apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01
-                   + mechvent_day01 
+fit_dv<-glm(as.factor(hosp_mortality)~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
                    , sodium_cat_1_df
-           ,family = 'binomial')
+           ,family = binomial("probit"))
+
 summary(fit_dv)
 
-OR_table<-as.data.frame(round(exp(cbind(OR=coef(fit_dv), confint.default(fit_dv))),2))
-
-OR_table
-```
-
-### Causal Mediation Analysis
-
-```{r}
 #treat is the independend variable
-mediation_results_cat1 <- mediate(fit_mediator, fit_dv, treat="sodium_cat", mediator="normal_gcs",sims = 20)
 
+mediation_results_cat1 <- mediate(fit_mediator, fit_dv, treat="sodium_cat", mediator="gcs_baseline",sims = 200)
 mediation_results_cat1_sum<-as.data.frame(extract_mediation_summary(mediation_results_cat1))
-mediation_results_cat1_sum
-
 mediation_results_cat1_sum<-mediation_results_cat1_sum[grepl("treated|Total Effect", rownames(mediation_results_cat1_sum)), ]
+
+mediation_results_cat1_sum
 ```
 
 ## Mediation analysis: Baseline sodium_cat_2
 
-### The total effect
-
 ```{r}
-fit_totaleffect<-glm(as.factor(hosp_mortality)~ 
-sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01
-# apache related variables
+fit_totaleffect<-glm(as.factor(hosp_mortality)~gcs_baseline+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
+
                    , sodium_cat_2_df
-,family = 'binomial')
+,family = binomial("probit"))
 summary(fit_totaleffect)
-
-OR_table<-as.data.frame(round(exp(cbind(OR=coef(fit_totaleffect), confint.default(fit_totaleffect))),2))
-
-OR_table
-
-```
-
-### The effect of the baseline sodium onto the mediator
-
-```{r}
-fit_mediator<-lm( normal_gcs ~ sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01
-# apache related variables
- 
-                   ,data =  sodium_cat_2_df)
-
-
-summary(fit_mediator)
-
-```
-
-### The effect of the mediator on the the dependent variable
-
-```{r}
-fit_dv<-glm(as.factor(hosp_mortality) ~ normal_gcs + sodium_cat +apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01
-                   + mechvent_day01 
+fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01,
+data =  sodium_cat_2_df)
+fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
                    , sodium_cat_2_df
-           ,family = 'binomial')
+           ,family = binomial("probit"))
 summary(fit_dv)
-
-OR_table<-as.data.frame(round(exp(cbind(OR=coef(fit_dv), confint.default(fit_dv))),2))
-
-OR_table
-```
-
-### Causal Mediation Analysis
-
-```{r}
 #treat is the independend variable
-mediation_results_cat2 <- mediate(fit_mediator, fit_dv, treat="sodium_cat", mediator="normal_gcs",sims = 20)
-
+mediation_results_cat2 <- mediate(fit_mediator, fit_dv, treat="sodium_cat", mediator="gcs_baseline",sims = 200)
 mediation_results_cat2_sum<-as.data.frame(extract_mediation_summary(mediation_results_cat2))
-mediation_results_cat2_sum
-
 mediation_results_cat2_sum<-mediation_results_cat2_sum[grepl("treated|Total Effect", rownames(mediation_results_cat2_sum)), ]
+
+mediation_results_cat2_sum
 ```
 
 ## Mediation analysis: Baseline sodium_cat_3
 
-### The total effect
-
 ```{r}
-fit_totaleffect<-glm(as.factor(hosp_mortality)~ 
-sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01
-# apache related variables
+fit_totaleffect<-glm(as.factor(hosp_mortality)~gcs_baseline+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
+
                    , sodium_cat_3_df
-,family = 'binomial')
+,family = binomial("probit"))
 summary(fit_totaleffect)
-
-OR_table<-as.data.frame(round(exp(cbind(OR=coef(fit_totaleffect), confint.default(fit_totaleffect))),2))
-
-OR_table
-
-```
-
-### The effect of the baseline sodium onto the mediator
-
-```{r}
-fit_mediator<-lm( normal_gcs ~ sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01
-# apache related variables
- 
-                   ,data =  sodium_cat_3_df)
-
-
-summary(fit_mediator)
-
-```
-
-### The effect of the mediator on the the dependent variable
-
-```{r}
-fit_dv<-glm(as.factor(hosp_mortality) ~ normal_gcs + sodium_cat +apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01
-                   + mechvent_day01 
+fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01,
+data =  sodium_cat_3_df)
+fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
                    , sodium_cat_3_df
-           ,family = 'binomial')
+           ,family = binomial("probit"))
 summary(fit_dv)
-
-OR_table<-as.data.frame(round(exp(cbind(OR=coef(fit_dv), confint.default(fit_dv))),2))
-
-OR_table
-```
-
-### Causal Mediation Analysis
-
-```{r}
 #treat is the independend variable
-mediation_results_cat3 <- mediate(fit_mediator, fit_dv, treat="sodium_cat", mediator="normal_gcs",sims = 20)
-
+mediation_results_cat3 <- mediate(fit_mediator, fit_dv, treat="sodium_cat", mediator="gcs_baseline",sims = 200)
 mediation_results_cat3_sum<-as.data.frame(extract_mediation_summary(mediation_results_cat3))
-mediation_results_cat3_sum
-
 mediation_results_cat3_sum<-mediation_results_cat3_sum[grepl("treated|Total Effect", rownames(mediation_results_cat3_sum)), ]
+
+mediation_results_cat3_sum
 ```
 
 ## Mediation analysis: Baseline sodium_cat_4
 
-### The total effect
-
 ```{r}
-fit_totaleffect<-glm(as.factor(hosp_mortality)~ 
-sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01
-# apache related variables
+fit_totaleffect<-glm(as.factor(hosp_mortality)~gcs_baseline+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
+
                    , sodium_cat_4_df
-,family = 'binomial')
+,family = binomial("probit"))
 summary(fit_totaleffect)
-
-OR_table<-as.data.frame(round(exp(cbind(OR=coef(fit_totaleffect), confint.default(fit_totaleffect))),2))
-
-OR_table
-
-```
-
-### The effect of the baseline sodium onto the mediator
-
-```{r}
-fit_mediator<-lm( normal_gcs ~ sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01
-# apache related variables
- 
-                   ,data =  sodium_cat_4_df)
-
-
-summary(fit_mediator)
-
-```
-
-### The effect of the mediator on the the dependent variable
-
-```{r}
-fit_dv<-glm(as.factor(hosp_mortality) ~ normal_gcs + sodium_cat +apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01
-                   + mechvent_day01 
+fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01,
+data =  sodium_cat_4_df)
+fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
                    , sodium_cat_4_df
-           ,family = 'binomial')
+           ,family = binomial("probit"))
 summary(fit_dv)
-
-OR_table<-as.data.frame(round(exp(cbind(OR=coef(fit_dv), confint.default(fit_dv))),2))
-
-OR_table
-```
-
-### Causal Mediation Analysis
-
-```{r}
 #treat is the independend variable
-mediation_results_cat4 <- mediate(fit_mediator, fit_dv, treat="sodium_cat", mediator="normal_gcs",sims = 20)
-
+mediation_results_cat4 <- mediate(fit_mediator, fit_dv, treat="sodium_cat", mediator="gcs_baseline",sims = 200)
 mediation_results_cat4_sum<-as.data.frame(extract_mediation_summary(mediation_results_cat4))
-mediation_results_cat4_sum
-
 mediation_results_cat4_sum<-mediation_results_cat4_sum[grepl("treated|Total Effect", rownames(mediation_results_cat4_sum)), ]
+mediation_results_cat4_sum
 
 ```
 
 ## Mediation analysis: Baseline sodium_cat_6
 
-### The total effect
-
 ```{r}
-fit_totaleffect<-glm(as.factor(hosp_mortality)~ 
-sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01
-# apache related variables
+fit_totaleffect<-glm(as.factor(hosp_mortality)~gcs_baseline+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
+
                    , sodium_cat_6_df
-,family = 'binomial')
+,family = binomial("probit"))
 summary(fit_totaleffect)
-
-OR_table<-as.data.frame(round(exp(cbind(OR=coef(fit_totaleffect), confint.default(fit_totaleffect))),2))
-
-OR_table
-
-```
-
-### The effect of the baseline sodium onto the mediator
-
-```{r}
-fit_mediator<-lm( normal_gcs ~ sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01
-# apache related variables
- 
-                   ,data =  sodium_cat_6_df)
-
-
-summary(fit_mediator)
-
-```
-
-### The effect of the mediator on the the dependent variable
-
-```{r}
-fit_dv<-glm(as.factor(hosp_mortality) ~ normal_gcs + sodium_cat +apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01
-                   + mechvent_day01 
+fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01,
+data =  sodium_cat_6_df)
+fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
                    , sodium_cat_6_df
-           ,family = 'binomial')
+           ,family = binomial("probit"))
 summary(fit_dv)
-
-OR_table<-as.data.frame(round(exp(cbind(OR=coef(fit_dv), confint.default(fit_dv))),2))
-
-OR_table
-```
-
-### Causal Mediation Analysis
-
-```{r}
 #treat is the independend variable
-mediation_results_cat6 <- mediate(fit_mediator, fit_dv, treat="sodium_cat", mediator="normal_gcs",sims = 20)
-
+mediation_results_cat6 <- mediate(fit_mediator, fit_dv, treat="sodium_cat", mediator="gcs_baseline",sims = 200)
 mediation_results_cat6_sum<-as.data.frame(extract_mediation_summary(mediation_results_cat6))
-mediation_results_cat6_sum
-
 mediation_results_cat6_sum<-mediation_results_cat6_sum[grepl("treated|Total Effect", rownames(mediation_results_cat6_sum)), ]
+mediation_results_cat6_sum
 ```
 
 ## Mediation analysis: Baseline sodium_cat_7
 
-### The total effect
-
 ```{r}
-fit_totaleffect<-glm(as.factor(hosp_mortality)~ 
-sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01
-# apache related variables
+fit_totaleffect<-glm(as.factor(hosp_mortality)~gcs_baseline+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
+
                    , sodium_cat_7_df
-,family = 'binomial')
+,family = binomial("probit"))
 summary(fit_totaleffect)
-
-OR_table<-as.data.frame(round(exp(cbind(OR=coef(fit_totaleffect), confint.default(fit_totaleffect))),2))
-
-OR_table
-
-```
-
-### The effect of the baseline sodium onto the mediator
-
-```{r}
-fit_mediator<-lm( normal_gcs ~ sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01
-# apache related variables
- 
-                   ,data =  sodium_cat_7_df)
-
-
-summary(fit_mediator)
-
-```
-
-### The effect of the mediator on the the dependent variable
-
-```{r}
-fit_dv<-glm(as.factor(hosp_mortality) ~ normal_gcs + sodium_cat +apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01
-                   + mechvent_day01 
+fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01,
+data =  sodium_cat_7_df)
+fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
                    , sodium_cat_7_df
-           ,family = 'binomial')
+           ,family = binomial("probit"))
 summary(fit_dv)
-
-OR_table<-as.data.frame(round(exp(cbind(OR=coef(fit_dv), confint.default(fit_dv))),2))
-
-OR_table
-```
-
-### Causal Mediation Analysis
-
-```{r}
 #treat is the independend variable
-mediation_results_cat7 <- mediate(fit_mediator, fit_dv, treat="sodium_cat", mediator="normal_gcs",sims = 20)
-
+mediation_results_cat7 <- mediate(fit_mediator, fit_dv, treat="sodium_cat", mediator="gcs_baseline",sims = 200)
 mediation_results_cat7_sum<-as.data.frame(extract_mediation_summary(mediation_results_cat7))
-mediation_results_cat7_sum
-
 mediation_results_cat7_sum<-mediation_results_cat7_sum[grepl("treated|Total Effect", rownames(mediation_results_cat7_sum)), ]
+mediation_results_cat7_sum
 ```
+
 
 ## Mediation analysis: Baseline sodium_cat_8
 
-### The total effect
-
 ```{r}
-fit_totaleffect<-glm(as.factor(hosp_mortality)~ 
-sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01
-# apache related variables
+fit_totaleffect<-glm(as.factor(hosp_mortality)~gcs_baseline+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
+
                    , sodium_cat_8_df
-,family = 'binomial')
+,family = binomial("probit"))
 summary(fit_totaleffect)
-
-OR_table<-as.data.frame(round(exp(cbind(OR=coef(fit_totaleffect), confint.default(fit_totaleffect))),2))
-
-OR_table
-
-```
-
-### The effect of the baseline sodium onto the mediator
-
-```{r}
-fit_mediator<-lm( normal_gcs ~ sodium_cat +                       
-apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01
-# apache related variables
- 
-                   ,data =  sodium_cat_8_df)
-
-
-summary(fit_mediator)
-
-```
-
-### The effect of the mediator on the the dependent variable
-
-```{r}
-fit_dv<-glm(as.factor(hosp_mortality) ~ normal_gcs + sodium_cat +apache_iv+age+gender+ethnicity+unittype+ charlson_liver1 +charlson_chf1+mechvent_day01
-                   + mechvent_day01 
+fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01,
+data =  sodium_cat_8_df)
+fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
                    , sodium_cat_8_df
-           ,family = 'binomial')
+           ,family = binomial("probit"))
 summary(fit_dv)
-
-OR_table<-as.data.frame(round(exp(cbind(OR=coef(fit_dv), confint.default(fit_dv))),2))
-
-OR_table
-```
-
-### Causal Mediation Analysis
-
-```{r}
 #treat is the independend variable
-mediation_results_cat8 <- mediate(fit_mediator, fit_dv, treat="sodium_cat", mediator="normal_gcs",sims = 20)
-
+mediation_results_cat8 <- mediate(fit_mediator, fit_dv, treat="sodium_cat", mediator="gcs_baseline",sims = 200)
 mediation_results_cat8_sum<-as.data.frame(extract_mediation_summary(mediation_results_cat8))
-mediation_results_cat8_sum
-
 mediation_results_cat8_sum<-mediation_results_cat8_sum[grepl("treated|Total Effect", rownames(mediation_results_cat8_sum)), ]
+mediation_results_cat8_sum
 ```
 
 # Ploting results
@@ -520,8 +258,6 @@ mediation_results_cat7_sum$cat<-7
 mediation_results_cat7_sum$results<-stri_replace_all_fixed(rownames(mediation_results_cat7_sum),'(treated)',"" )
 mediation_results_cat8_sum$cat<-8
 mediation_results_cat8_sum$results<-stri_replace_all_fixed(rownames(mediation_results_cat8_sum),'(treated)',"" )
-
-
 mediation_results_all<-rbind(
  mediation_results_cat1_sum
 ,mediation_results_cat2_sum
@@ -536,9 +272,32 @@ rownames(mediation_results_all)<-NULL
 
 ## Final Plot
 
+## Prop. Mediated
+
+```{r}
+mediation_results_filtered<-mediation_results_all%>% filter(results %in% c('Prop. Mediated '))
+ggplot(data=mediation_results_filtered,aes(x=cat,y=Estimate,colour=results,fill=results))+
+    geom_point()+
+    geom_line()+
+    geom_errorbar(data=mediation_results_filtered
+                  ,aes(x=cat,ymin=`95% CI Lower`,ymax=`95% CI Upper`,fill=results)
+                  ,alpha=0.3
+                  ,inherit.aes=FALSE
+                  ,width=0.2)+
+    xlab('Baseline Sodium Category')+
+    ylab('Estimate')+
+    #scale_color_manual(labels = c("Male", "Female"), values = c("#1abc9c","#f1c40f"))+
+    #scale_fill_manual(labels = c("Male", "Female"), values = c("#1abc9c","#f1c40f"))+
+    #labs(colour='sex', fill='sex') +
+    theme_minimal()+
+  ggtitle('Proportion Mediated')+
+  scale_x_continuous(breaks = c(1,2,3,4,6,7,8))
+```
+
+### Indirect Effect
+
 ```{r}
 mediation_results_filtered<-mediation_results_all%>% filter(results %in% c('ACME '))
-
 ggplot(data=mediation_results_filtered,aes(x=cat,y=Estimate,colour=results,fill=results))+
     geom_point()+
     geom_line()+
@@ -558,3 +317,140 @@ ggplot(data=mediation_results_filtered,aes(x=cat,y=Estimate,colour=results,fill=
 ```
 
 
+# Direct Effect
+
+```{r}
+mediation_results_filtered<-mediation_results_all%>% filter(results %in% c('ADE '))
+ggplot(data=mediation_results_filtered,aes(x=cat,y=Estimate,colour=results,fill=results))+
+    geom_point()+
+    geom_line()+
+    geom_errorbar(data=mediation_results_filtered
+                  ,aes(x=cat,ymin=`95% CI Lower`,ymax=`95% CI Upper`,fill=results)
+                  ,alpha=0.3
+                  ,inherit.aes=FALSE
+                  ,width=0.2)+
+    xlab('Baseline Sodium Category')+
+    ylab('Estimate')+
+    #scale_color_manual(labels = c("Male", "Female"), values = c("#1abc9c","#f1c40f"))+
+    #scale_fill_manual(labels = c("Male", "Female"), values = c("#1abc9c","#f1c40f"))+
+    #labs(colour='sex', fill='sex') +
+    theme_minimal()+
+  ggtitle("Average Direct Effect")+
+  scale_x_continuous(breaks = c(1,2,3,4,6,7,8))
+```
+
+# Total Effect
+
+```{r}
+mediation_results_filtered<-mediation_results_all%>% filter(results %in% c('Total Effect'))
+ggplot(data=mediation_results_filtered,aes(x=cat,y=Estimate,colour=results,fill=results))+
+    geom_point()+
+    geom_line()+
+    geom_errorbar(data=mediation_results_filtered
+                  ,aes(x=cat,ymin=`95% CI Lower`,ymax=`95% CI Upper`,fill=results)
+                  ,alpha=0.3
+                  ,inherit.aes=FALSE
+                  ,width=0.2)+
+    xlab('Baseline Sodium Category')+
+    ylab('Estimate')+
+    #scale_color_manual(labels = c("Male", "Female"), values = c("#1abc9c","#f1c40f"))+
+    #scale_fill_manual(labels = c("Male", "Female"), values = c("#1abc9c","#f1c40f"))+
+    #labs(colour='sex', fill='sex') +
+    theme_minimal()+
+  ggtitle('Total Effect')+
+  scale_x_continuous(breaks = c(1,2,3,4,6,7,8))
+```
+
+# Combined Plots
+
+We are going to plot the OR of the estimates. The most interesting metrics to plot are Total Effect and Proportion Mediated
+
+
+
+## Prop. Mediated + Total Effect
+
+```{r fig.height=9, fig.width=7}
+mediation_results_total_effect<-mediation_results_all%>%filter(results %in% c("Total Effect" ) )
+
+mediation_results_total_effect[,c(1,2,3)]<-exp(mediation_results_total_effect[,c(1,2,3)])
+
+
+p1<-ggplot(data=mediation_results_total_effect,aes(x=cat,y=Estimate,colour=results,fill=results))+
+    geom_point()+
+    geom_line()+
+    geom_ribbon(   data=mediation_results_total_effect
+                  ,aes(x=cat,ymin=`95% CI Lower`,ymax=`95% CI Upper`,fill=results)
+                  ,alpha=0.3
+                  ,inherit.aes=F
+                  ,width=0.2)+
+    xlab('Baseline Sodium Category')+
+    ylab('Odds Ratio')+
+    scale_color_manual(labels = c("Total Effect"), values = c("#1abc9c"))+
+    scale_fill_manual(labels = c("Total Effect"), values = c("#1abc9c"))+
+    labs(colour='Metric', fill='Metric') +
+    theme_minimal()+
+  ggtitle('Total Effect')+
+  scale_x_continuous(breaks = c(1,2,3,4,6,7,8)) 
+
+mediation_results_propmediated<-mediation_results_all%>%filter(results %in% c("Prop. Mediated ") ) 
+
+p2<-ggplot(data=mediation_results_propmediated,aes(x=cat,y=Estimate,colour=results,fill=results))+
+    geom_point()+
+    geom_line()+
+    geom_ribbon(   data=mediation_results_propmediated
+                  ,aes(x=cat,ymin=`95% CI Lower`,ymax=`95% CI Upper`,fill=results)
+                  ,alpha=0.3
+                  ,inherit.aes=F
+                  ,width=0.2)+
+    xlab('Baseline Sodium Category')+
+    ylab('%')+
+    scale_color_manual(labels = c("Proportion Mediated"), values = c("#f1c40f"))+
+    scale_fill_manual(labels = c("Proportion Mediated"), values = c("#f1c40f"))+
+    labs(colour='Metric', fill='Metric') +
+    theme_minimal()+
+  ggtitle('Proportion Mediated')+
+  scale_x_continuous(breaks = c(1,2,3,4,6,7,8)) 
+
+plot_grid(p2, p1, scale = c(1, 1),ncol = 1, align = "v")
+```
+
+## Prop. Mediated + Total Effect
+
+```{r fig.height=9, fig.width=7}
+mediation_results_total_effect<-mediation_results_all%>%filter(results %in% c("Total Effect" ) )
+
+mediation_results_total_effect[,c(1,2,3)]<-exp(mediation_results_total_effect[,c(1,2,3)])
+
+
+p1<-ggplot(data=mediation_results_total_effect,aes(x=cat,y=Estimate,colour=results,fill=results))+
+    geom_point()+
+    geom_line()+
+    geom_ribbon(   data=mediation_results_total_effect
+                  ,aes(x=cat,ymin=`95% CI Lower`,ymax=`95% CI Upper`,fill=results)
+                  ,alpha=0.3
+                  ,inherit.aes=F
+                  ,width=0.2)+
+    xlab('Baseline Sodium Category')+
+    ylab('Odds Ratio')+
+    scale_color_manual(labels = c("Total Effect"), values = c("#1abc9c"))+
+    scale_fill_manual(labels = c("Total Effect"), values = c("#1abc9c"))+
+    labs(colour='Metric', fill='Metric') +
+    theme_minimal()+
+  ggtitle('Total Effect')+
+  scale_x_continuous(breaks = c(1,2,3,4,6,7,8)) 
+
+mediation_results_propmediated<-mediation_results_all%>%filter(results %in% c("Prop. Mediated ") ) 
+
+p2<-ggplot(data=mediation_results_propmediated,aes(x=cat,y=Estimate*100,fill=results))+
+    geom_area()+
+    xlab('Baseline Sodium Category')+
+    ylab('%')+
+    scale_color_manual(labels = c("Proportion Mediated"), values = c("#f1c40f"))+
+    scale_fill_manual(labels = c("Proportion Mediated"), values = c("#f1c40f"))+
+    labs(colour='Metric', fill='Metric') +
+    theme_minimal()+
+  ggtitle('Proportion Mediated')+
+  scale_x_continuous(breaks = c(1,2,3,4,6,7,8)) 
+
+plot_grid(p2, p1, scale = c(1, 1),ncol = 1, align = "v")
+```
