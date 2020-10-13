@@ -496,21 +496,19 @@ p<-ggplot()+
     ylab('%')+
    # scale_color_manual(labels = c("Proportion Mediated"), values = c("#f1c40f"))+
     scale_fill_manual(labels = c("Proportion Mediated"), values = c("#f1c40f"))+
-    #labs(colour='Metric', fill='Metric') +
+    labs(colour='Metric', fill='Metric') +
     theme_minimal()+
-  theme(legend.position="bottom")+
   ggtitle('Proportion Mediated')+
   scale_x_continuous(breaks = c(1,2,3,4,5,6,7,8)) +
   
-  geom_point(data = total_effect,aes(x=cat,y=or-1),color = "red")+
-  geom_line(data = total_effect,aes(x=cat,y=or-1),color = "red")+
+  geom_point(data = total_effect,aes(x=cat,y=or-1,colour="red"))+
+  geom_line(data = total_effect,aes(x=cat,y=or-1,colour="red"))+
   geom_errorbar(data=total_effect
                   ,aes(x=cat,ymin=or.lb-1,ymax=or.ub-1)
                   ,alpha=0.3
                   ,inherit.aes=FALSE
                   ,width=0.2)+
   scale_y_continuous(
-    position = "right",
     
     # Features of the first axis
     name = "Proption Mediated",
