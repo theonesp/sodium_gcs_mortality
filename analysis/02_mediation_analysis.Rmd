@@ -452,6 +452,8 @@ ggplot(data=mediation_results_filtered,aes(x=cat,y=Estimate,colour=results,fill=
 # Total Effect in Odds Ratio
 
 ```{r}
+total_effect<-rbind(total_effect,data.frame(cat = 5,estimated = 0,se = 0))
+
 total_effect<-total_effect%>%
   mutate(lb = estimated -1.96*se, ub = estimated + 1.96*se)%>%
   mutate(or = exp(estimated),or.lb = exp(lb),or.ub = exp(ub))
@@ -470,7 +472,7 @@ ggplot(data=total_effect,aes(x=cat,y=or))+
     #labs(colour='sex', fill='sex') +
     theme_minimal()+
   ggtitle('Total Effect')+
-  scale_x_continuous(breaks = c(1,2,3,4,6,7,8))
+  scale_x_continuous(breaks = c(1,2,3,4,5,6,7,8))
 ```
 
 # Combined Plots
@@ -481,19 +483,23 @@ We are going to plot the OR of the estimates. The most interesting metrics to pl
 
 ## Prop. Mediated + Total Effect
 ```{r fig.height=9, fig.width=7}
-mediation_results_propmediated<-mediation_results_all%>%filter(results %in% c("Prop. Mediated ") ) 
+mediation_results_propmediated<-mediation_results_all%>%
+  filter(results %in% c("Prop. Mediated ") ) %>%
+  select(Estimate,cat,results)
 
+mediation_results_propmediated<-rbind(mediation_results_propmediated,
+                                      data.frame(Estimate = 0, cat = 5, results = "Prop. Mediated "))
 
 p<-ggplot()+
     geom_area(data=mediation_results_propmediated,aes(x=cat,y=Estimate,fill=results))+
     xlab('Baseline Sodium Category')+
     ylab('%')+
-    scale_color_manual(labels = c("Proportion Mediated"), values = c("#f1c40f"))+
+   # scale_color_manual(labels = c("Proportion Mediated"), values = c("#f1c40f"))+
     scale_fill_manual(labels = c("Proportion Mediated"), values = c("#f1c40f"))+
     labs(colour='Metric', fill='Metric') +
     theme_minimal()+
   ggtitle('Proportion Mediated')+
-  scale_x_continuous(breaks = c(1,2,3,4,6,7,8)) +
+  scale_x_continuous(breaks = c(1,2,3,4,5,6,7,8)) +
   
   geom_point(data = total_effect,aes(x=cat,y=or-1,colour="red"))+
   geom_line(data = total_effect,aes(x=cat,y=or-1,colour="red"))+
