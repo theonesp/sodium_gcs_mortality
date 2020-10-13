@@ -491,30 +491,31 @@ mediation_results_propmediated<-rbind(mediation_results_propmediated,
                                       data.frame(Estimate = 0, cat = 5, results = "Prop. Mediated "))
 
 p<-ggplot()+
-    geom_area(data=mediation_results_propmediated,aes(x=cat,y=Estimate,fill=results))+
+    geom_area(data=mediation_results_propmediated,aes(x=cat,y=Estimate*100,fill=results))+
     xlab('Baseline Sodium Category')+
     ylab('%')+
    # scale_color_manual(labels = c("Proportion Mediated"), values = c("#f1c40f"))+
     scale_fill_manual(labels = c("Proportion Mediated"), values = c("#f1c40f"))+
-    labs(colour='Metric', fill='Metric') +
+    labs(colour='Mortality Risk', fill='Proportion Mediated') +
+    theme(legend.position="bottom")+
     theme_minimal()+
-  ggtitle('Proportion Mediated')+
-  scale_x_continuous(breaks = c(1,2,3,4,5,6,7,8)) +
+  scale_x_continuous(breaks = c(1,2,3,4,5,6,7,8),labels = c("<120","120-125","125-130","130-135","135-140(reference)","140-145","145-150",">150")) +
   
-  geom_point(data = total_effect,aes(x=cat,y=or-1,colour="red"))+
-  geom_line(data = total_effect,aes(x=cat,y=or-1,colour="red"))+
+  geom_point(data = total_effect,aes(x=cat,y=(or-1)*100,colour="red"))+
+  geom_line(data = total_effect,aes(x=cat,y=(or-1)*100,colour="red"))+
   geom_errorbar(data=total_effect
-                  ,aes(x=cat,ymin=or.lb-1,ymax=or.ub-1)
+                  ,aes(x=cat,ymin=(or.lb-1)*100,ymax=(or.ub-1)*100)
                   ,alpha=0.3
                   ,inherit.aes=FALSE
                   ,width=0.2)+
   scale_y_continuous(
+    position ="right",
     
     # Features of the first axis
-    name = "Proption Mediated",
+    name = "Proportion of mortality mediated by GCS score (%)",
     
     # Add a second axis and specify its features
-    sec.axis = sec_axis(~(.+1), name="Odds ratio")
+    sec.axis = sec_axis(~(./100)+1, name="Odds ratio (95%CI) of hospital mortality")
   ) 
 
 plot_grid(p, scale = c(1, 1),ncol = 1, align = "v")
@@ -560,13 +561,5 @@ p2<-ggplot(data=mediation_results_propmediated,aes(x=cat,y=Estimate*100,fill=res
 p1+p2
 
 plot_grid(p2, p1, scale = c(1, 1),ncol = 1, align = "v")
-```
-
-
-# Sensitivity Analisys
-
-```{r}
-sens.out <- medsens(med.out, rho.by = 0.1, effect.type = "indirect", sims = 100)
-summary(sens.out)
 ```
 
