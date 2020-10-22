@@ -101,6 +101,8 @@ The _apachepredvar_ table provides variables underlying the APACHE predictions. 
 
 We are extracting all variables needed to calculate apache except sodium.
 
+*WE ARE FINALLY NOT USING allapachevars*
+
 ```{r}
 options(scipen = 20) # bigquery was producing an error that can be fixed with this command.
 #bq_auth() # CRITICAL!!! THIS NEEDS TO BE RUN FROM THE CONSOLE. IT WON'T WORK IF RUN FROM MARKDOWN.
@@ -150,6 +152,7 @@ gcs_baseline <- run_query( getSQL("../sql/gcs_baseline.sql" ))
 admission_sodium <- run_query( getSQL("../sql/admission_sodium.sql" ))
 charlson_score <- run_query( getSQL("../sql/charlson_score.sql" ))
 ventilated_binary_first_day <- run_query( getSQL("../sql/ventilated_binary_first_day.sql" ))
+acute_physiology_score_components <- run_query( getSQL("../analysis/sql/acute_physiology_score_components.sql" ))
 
 ```
 
@@ -163,7 +166,7 @@ initial_dataset<-Reduce(function(...) merge(..., all.x=TRUE), list(
   ,charlson_score
   ,ventilated_binary_first_day
   ,apache_groups
-  ,allapachevars
+  ,acute_physiology_score_components
 ))
 ```
 
@@ -196,32 +199,17 @@ hospitaladmitsource,
 unittype, 
 AP_grp,
 # comorb
-charlson_mets6,
-charlson_aids6,
-charlson_liver3,
-charlson_stroke2,
-charlson_renal2,
-charlson_dm,
-charlson_cancer2,
-charlson_leukemia2,
-charlson_lymphoma2,
-charlson_mi1,
 charlson_chf1,
-charlson_pvd1,
-charlson_tia1,
-charlson_dementia1,
-charlson_copd1,
-charlson_ctd1,
-charlson_pud1,
 charlson_liver1,
-charlson_age_score,
+
 #others
 mechvent_day01,
-dialysis,
 #main
 sodium1,
 gcs_baseline,
-hosp_mortality
+hosp_mortality,
+respiratoryrate,
+MAP
 )
 
 # factorizing variables

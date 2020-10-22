@@ -82,7 +82,7 @@ extract_mediation_summary <- function (x) {
 
 ```{r}
 total_effect<-NULL
-fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
+fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+respiratoryrate+MAP
 
                    , sodium_cat_1_df
 ,family = binomial)
@@ -91,10 +91,10 @@ total_effect<-rbind(total_effect,data.frame(cat = 1,estimated = summ$coefficient
 
 
 
-fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01,
+fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+respiratoryrate+MAP,
 data =  sodium_cat_1_df)
 
-fit_dv<-glm(as.factor(hosp_mortality)~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
+fit_dv<-glm(as.factor(hosp_mortality)~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+respiratoryrate+MAP
                    , sodium_cat_1_df
            ,family = binomial("probit"))
 
@@ -122,7 +122,7 @@ plot(sens.out, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 
 ### Mediation analysis
 
 ```{r}
-fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
+fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+respiratoryrate+MAP
 
                    , sodium_cat_2_df
 ,family = binomial)
@@ -131,9 +131,9 @@ total_effect<-rbind(total_effect,data.frame(cat = 2,estimated = summ$coefficient
 
 
 
-fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01,
+fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+respiratoryrate+MAP,
 data =  sodium_cat_2_df)
-fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
+fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+respiratoryrate+MAP
                    , sodium_cat_2_df
            ,family = binomial("probit"))
 summary(fit_dv)
@@ -158,16 +158,16 @@ plot(sens.out, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 
 ### Mediation analysis
 
 ```{r}
-fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
+fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+respiratoryrate+MAP
 
                    , sodium_cat_3_df
 ,family = binomial)
 summ<-summary(fit_totaleffect)
 total_effect<-rbind(total_effect,data.frame(cat = 3,estimated = summ$coefficients[2],se = summ$coefficients[2+length(summ$coefficients)/4]))
 
-fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01,
+fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+respiratoryrate+MAP,
 data =  sodium_cat_3_df)
-fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
+fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+respiratoryrate+MAP
                    , sodium_cat_3_df
            ,family = binomial("probit"))
 summary(fit_dv)
@@ -192,15 +192,15 @@ plot(sens.out, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 
 ### Mediation analysis
 
 ```{r}
-fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
+fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+respiratoryrate+MAP
 
                    , sodium_cat_4_df
 ,family = binomial)
 summ<-summary(fit_totaleffect)
 total_effect<-rbind(total_effect,data.frame(cat = 4,estimated = summ$coefficients[2],se = summ$coefficients[2+length(summ$coefficients)/4]))
-fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01,
+fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+respiratoryrate+MAP,
 data =  sodium_cat_4_df)
-fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
+fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+respiratoryrate+MAP
                    , sodium_cat_4_df
            ,family = binomial("probit"))
 summary(fit_dv)
@@ -224,7 +224,7 @@ plot(sens.out, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 
 ### Mediation analysis
 
 ```{r}
-fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
+fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+respiratoryrate+MAP
 
                    , sodium_cat_6_df
 ,family = binomial)
@@ -232,9 +232,9 @@ summ<-summary(fit_totaleffect)
 total_effect<-rbind(total_effect,data.frame(cat = 6,estimated = summ$coefficients[2],se = summ$coefficients[2+length(summ$coefficients)/4]))
 
 
-fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01,
+fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+respiratoryrate+MAP,
 data =  sodium_cat_6_df)
-fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
+fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+respiratoryrate+MAP
                    , sodium_cat_6_df
            ,family = binomial("probit"))
 summary(fit_dv)
@@ -258,7 +258,7 @@ plot(sens.out, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 
 ### Mediation analysis
 
 ```{r}
-fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
+fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+respiratoryrate+MAP
 
                    , sodium_cat_7_df
 ,family = binomial)
@@ -266,9 +266,9 @@ summ<-summary(fit_totaleffect)
 total_effect<-rbind(total_effect,data.frame(cat = 7,estimated = summ$coefficients[2],se = summ$coefficients[2+length(summ$coefficients)/4]))
 
 
-fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01,
+fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+respiratoryrate+MAP,
 data =  sodium_cat_7_df)
-fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
+fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+respiratoryrate+MAP
                    , sodium_cat_7_df
            ,family = binomial("probit"))
 summary(fit_dv)
@@ -292,7 +292,7 @@ plot(sens.out, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 
 ### Mediation analysis
 
 ```{r}
-fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
+fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+respiratoryrate+MAP
 
                    , sodium_cat_8_df
 ,family = binomial)
@@ -300,9 +300,9 @@ summ<-summary(fit_totaleffect)
 total_effect<-rbind(total_effect,data.frame(cat = 8,estimated = summ$coefficients[2],se = summ$coefficients[2+length(summ$coefficients)/4]))
 
 
-fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01,
+fit_mediator<-lm(gcs_baseline ~ sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+respiratoryrate+MAP,
 data =  sodium_cat_8_df)
-fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01
+fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+respiratoryrate+MAP
                    , sodium_cat_8_df
            ,family = binomial("probit"))
 summary(fit_dv)
@@ -479,9 +479,8 @@ ggplot(data=total_effect,aes(x=cat,y=or))+
 
 We are going to plot the OR of the estimates. The most interesting metrics to plot are Total Effect and Proportion Mediated
 
-
-
 ## Prop. Mediated + Total Effect
+
 ```{r fig.height=9, fig.width=7}
 mediation_results_propmediated<-mediation_results_all%>%
   filter(results %in% c("Prop. Mediated ") ) %>%

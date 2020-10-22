@@ -4,3 +4,4 @@
 .Ruserdata
 documents
 selected_df.Rds
+*.RData
