@@ -34,7 +34,8 @@ par(mfrow = c(1,1))
 
 
 #Sensitivity Plot
-png("Figure2-70.png", width = 5, height = 4, units = 'in', res = 1000)
-plot(sens.out8, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 0.05))
+png("Figure2-11.png", width = 5, height = 4, units = 'in', res = 1000)
+plot(sens.out1, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 0.05))
 dev.off()
 par(mfrow = c(1,1))
+
