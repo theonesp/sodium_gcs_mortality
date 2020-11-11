@@ -111,7 +111,7 @@ mediation_results_cat1_sum
 
 ### Sensitivity Analisys
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 sens.out <- medsens(mediation_results_cat1, rho.by = 0.1, effect.type = "indirect", sims = 100)
 summary(sens.out)
 plot(sens.out, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 0.05))
@@ -147,7 +147,7 @@ mediation_results_cat2_sum
 
 ### Sensitivity Analisys
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 sens.out <- medsens(mediation_results_cat2, rho.by = 0.1, effect.type = "indirect", sims = 100)
 summary(sens.out)
 plot(sens.out, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 0.05))
@@ -181,7 +181,7 @@ mediation_results_cat3_sum
 
 ### Sensitivity Analisys
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 sens.out <- medsens(mediation_results_cat3, rho.by = 0.1, effect.type = "indirect", sims = 100)
 summary(sens.out)
 plot(sens.out, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 0.05))
@@ -214,7 +214,7 @@ mediation_results_cat4_sum
 
 ### Sensitivity Analisys
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 sens.out <- medsens(mediation_results_cat4, rho.by = 0.1, effect.type = "indirect", sims = 100)
 summary(sens.out)
 plot(sens.out, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 0.05))
@@ -247,7 +247,7 @@ mediation_results_cat6_sum
 
 ### Sensitivity Analisys
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 sens.out <- medsens(mediation_results_cat6, rho.by = 0.1, effect.type = "indirect", sims = 100)
 summary(sens.out)
 plot(sens.out, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 0.05))
@@ -281,7 +281,7 @@ mediation_results_cat7_sum
 
 ### Sensitivity Analisys
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 sens.out <- medsens(mediation_results_cat7, rho.by = 0.1, effect.type = "indirect", sims = 100)
 summary(sens.out)
 plot(sens.out, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 0.05))
@@ -315,7 +315,7 @@ mediation_results_cat8_sum
 
 ### Sensitivity Analisys
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 sens.out <- medsens(mediation_results_cat8, rho.by = 0.1, effect.type = "indirect", sims = 100)
 summary(sens.out)
 plot(sens.out, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 0.05))
