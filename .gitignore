@@ -5,3 +5,4 @@
 documents
 selected_df.Rds
 *.RData
+*.csv
