@@ -126,6 +126,23 @@ allapachevars<-allapachevars%>%mutate(
   electivesurgery=as.integer(if_else(is.na(electivesurgery),'0',as.character(electivesurgery)))
   
 )
+
+# imputing variables, normally -1 means missing so we are removing them in the appropriate fields and then performing median imputation
+minus_one_removal <- function(x) {
+  minus_one_remov <- ifelse(x==-1,as.logical(NA),x)
+  return(minus_one_remov)
+}
+
+median_imp <- function(x) {
+  median_impu <- if_else(is.na(x),median(x,na.rm = T),x)
+  return(median_impu)
+}
+
+allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","respiratoryrate","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")]<-apply(allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","respiratoryrate","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")],2, function(x) minus_one_removal(x) )
+
+allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","respiratoryrate","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")]<-apply(allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","respiratoryrate","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")],2, function(x) median_imp(x) )
+  
+
 apache_groups <- run_query( getSQL("../sql/apache_groups.sql" ))
 
 apache_groups<-apache_groups%>%
