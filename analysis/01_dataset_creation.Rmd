@@ -176,14 +176,15 @@ acute_physiology_score_components <- run_query( getSQL("../analysis/sql/acute_ph
 # Left Join
 
 ```{r}
-initial_dataset<-Reduce(function(...) merge(..., all.x=TRUE), list(
+initial_dataset<-Reduce(function(...) merge(..., all.x=TRUE, by = "patientunitstayid"), list(
    basic_demographics
   ,gcs_baseline
   ,admission_sodium
   ,charlson_score
   ,ventilated_binary_first_day
   ,apache_groups
-  ,acute_physiology_score_components
+  #,acute_physiology_score_components
+  ,allapachevars
 ))
 ```
 
@@ -225,8 +226,71 @@ mechvent_day01,
 sodium1,
 gcs_baseline,
 hosp_mortality,
+
+#apachevars
+intubated,
+vent,
+dialysis,
+eyes,
+motor,
+verbal,
+meds,
+urine,
+wbc,
+temperature,
 respiratoryrate,
-MAP
+heartrate,
+meanbp,
+ph,
+hematocrit,
+creatinine,
+albumin,
+pao2,
+pco2,
+bun,
+glucose,
+bilirubin,
+fio2,
+sicuday,
+saps3day1,
+saps3today,
+saps3yesterday,
+teachtype,
+region,
+bedcount,
+admitsource,
+graftcount,
+admitdiagnosis,
+thrombolytics,
+diedinhospital,
+aids,
+hepaticfailure,
+lymphoma,
+metastaticcancer,
+leukemia,
+immunosuppression,
+cirrhosis,
+electivesurgery,
+activetx,
+readmit,
+ima,
+midur,
+ventday1,
+oobventday1,
+oobintubday1,
+diabetes,
+managementsystem,
+var03hspxlos,
+ejectfx,
+dischargelocation,
+visitnumber,
+amilocation,
+day1meds,
+day1verbal,
+day1motor,
+day1eyes,
+day1pao2,
+day1fio2
 )
 
 # factorizing variables
@@ -290,12 +354,6 @@ selected_df<-selected_df%>%mutate(
 selected_df$sodium_cat<-as.factor(selected_df$sodium_cat)
 ```
 
-# Dataset Export
-
-```{r}
-saveRDS(selected_df,file=paste('sodium_gcs_mediation_',Sys.Date(),'.Rds'))
-```
-
 # Separate Sodium bands datasets
 
 ## Creating the subsets
@@ -357,5 +415,9 @@ sodium_cat_8_df<-sodium_cat_8_df%>%mutate(
 
 ```
 
+# Dataset Export
 
+```{r}
+saveRDS(selected_df,file=paste('sodium_gcs_mediation_',Sys.Date(),'.Rds'))
+```
 
