@@ -7,3 +7,4 @@ selected_df.Rds
 *.RData
 *.csv
 *.zip
+.DS_Store
