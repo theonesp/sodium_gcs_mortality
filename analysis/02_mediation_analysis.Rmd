@@ -32,6 +32,9 @@ library(data.table)
 library(table1)
 library(cowplot)
 '%!in%' <- function(x,y)!('%in%'(x,y))
+
+# useful mediation functions
+
 extract_mediation_summary <- function (x) { 
   clp <- 100 * x$conf.level
   isLinear.y <- ((class(x$model.y)[1] %in% c("lm", "rq")) || 
@@ -66,19 +69,6 @@ extract_mediation_summary <- function (x) {
                       paste(clp, "% CI Upper", sep = ""), "p-value")
   smat
 }
-
-
-data$sodium_cat<-as.numeric(as.character(data$sodium_cat))
-sodium_cat_1_df<-data%>%filter(sodium_cat%in%c(1,5))
-sodium_cat_2_df<-data%>%filter(sodium_cat%in%c(2,5))
-sodium_cat_3_df<-data%>%filter(sodium_cat%in%c(3,5))
-sodium_cat_4_df<-data%>%filter(sodium_cat%in%c(4,5))
-sodium_cat_6_df<-data%>%filter(sodium_cat%in%c(6,5))
-sodium_cat_7_df<-data%>%filter(sodium_cat%in%c(7,5))
-sodium_cat_8_df<-data%>%filter(sodium_cat%in%c(8,5))
-
-
-
 ```
 
 
@@ -423,7 +413,7 @@ results_overall<-rbind(mediation_results_all,total_effect_copy)
 ## Prop. Mediated
 
 ```{r}
-mediation_results_filtered<-mediation_results_all%>% filter(results %in% c('Prop. Mediated '))
+mediation_results_filtered<-mediation_results_all%>% filter(results %in% c('Prop. Mediated (average)'))
 ggplot(data=mediation_results_filtered,aes(x=cat,y=Estimate,colour=results,fill=results))+
     geom_point()+
     geom_line()+
@@ -445,7 +435,7 @@ ggplot(data=mediation_results_filtered,aes(x=cat,y=Estimate,colour=results,fill=
 ### Indirect Effect
 
 ```{r}
-mediation_results_filtered<-mediation_results_all%>% filter(results %in% c('ACME '))
+mediation_results_filtered<-mediation_results_all%>% filter(results %in% c('ACME (average)'))
 ggplot(data=mediation_results_filtered,aes(x=cat,y=Estimate,colour=results,fill=results))+
     geom_point()+
     geom_line()+
@@ -468,7 +458,7 @@ ggplot(data=mediation_results_filtered,aes(x=cat,y=Estimate,colour=results,fill=
 # Direct Effect
 
 ```{r}
-mediation_results_filtered<-mediation_results_all%>% filter(results %in% c('ADE '))
+mediation_results_filtered<-mediation_results_all%>% filter(results %in% c('ADE (average)'))
 ggplot(data=mediation_results_filtered,aes(x=cat,y=Estimate,colour=results,fill=results))+
     geom_point()+
     geom_line()+
@@ -539,11 +529,11 @@ We are going to plot the OR of the estimates. The most interesting metrics to pl
 
 ```{r fig.height=9, fig.width=7}
 mediation_results_propmediated<-mediation_results_all%>%
-  filter(results %in% c("Prop. Mediated ") ) %>%
-  select(Estimate,cat,results)
+  filter(results %in% c("Prop. Mediated (average)") ) %>%
+  dplyr::select(Estimate,cat,results)
 
 mediation_results_propmediated<-rbind(mediation_results_propmediated,
-                                      data.frame(Estimate = 0, cat = 5, results = "Prop. Mediated "))
+                                      data.frame(Estimate = 0, cat = 5, results = "Prop. Mediated (average)"))
 
 p<-ggplot()+
     geom_area(data=mediation_results_propmediated,aes(x=cat,y=Estimate*100,fill=results))+
@@ -601,7 +591,7 @@ p1<-ggplot(data=mediation_results_total_effect,aes(x=cat,y=Estimate,colour=resul
   ggtitle('Total Effect')+
   scale_x_continuous(breaks = c(1,2,3,4,6,7,8)) 
 
-mediation_results_propmediated<-mediation_results_all%>%filter(results %in% c("Prop. Mediated ") ) 
+mediation_results_propmediated<-mediation_results_all%>%filter(results %in% c("Prop. Mediated (average)") ) 
 
 p2<-ggplot(data=mediation_results_propmediated,aes(x=cat,y=Estimate*100,fill=results))+
     geom_area()+
@@ -613,7 +603,6 @@ p2<-ggplot(data=mediation_results_propmediated,aes(x=cat,y=Estimate*100,fill=res
     theme_minimal()+
   ggtitle('Proportion Mediated')+
   scale_x_continuous(breaks = c(1,2,3,4,6,7,8)) 
-p1+p2
 
 plot_grid(p2, p1, scale = c(1, 1),ncol = 1, align = "v")
 ```

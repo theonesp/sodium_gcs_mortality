@@ -12,7 +12,6 @@ SELECT
   urine,
   wbc,
   temperature,
-  respiratoryrate,
   heartrate,
   meanbp,
   ph,

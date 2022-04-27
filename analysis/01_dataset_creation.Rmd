@@ -28,7 +28,9 @@ library(caret)
 library(plotly)
 library(table1)
 library(Amelia)
-library( ggpubr)
+library(ggpubr)
+library(magrittr)
+library(PRISMAstatement)
 options(scipen=999)
 
 # useful functions
@@ -106,8 +108,8 @@ We are extracting all variables needed to calculate apache except sodium.
 ```{r}
 options(scipen = 20) # bigquery was producing an error that can be fixed with this command.
 #bq_auth() # CRITICAL!!! THIS NEEDS TO BE RUN FROM THE CONSOLE. IT WON'T WORK IF RUN FROM MARKDOWN.
-apacheapsvar <- run_query( getSQL("../sql/apacheapsvar.sql" ))
-apachepredvar <- run_query( getSQL("../sql/apachepredvar.sql" ))
+apacheapsvar <- run_query( getSQL("sql/apacheapsvar.sql" ))
+apachepredvar <- run_query( getSQL("sql/apachepredvar.sql" ))
 selected_columns<-names(apachepredvar[names(apachepredvar) %!in% names(apacheapsvar)])
 selected_columns<-c('patientunitstayid',selected_columns)
 
@@ -138,12 +140,12 @@ median_imp <- function(x) {
   return(median_impu)
 }
 
-allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","respiratoryrate","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")]<-apply(allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","respiratoryrate","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")],2, function(x) minus_one_removal(x) )
+allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")]<-apply(allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")],2, function(x) minus_one_removal(x) )
 
-allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","respiratoryrate","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")]<-apply(allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","respiratoryrate","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")],2, function(x) median_imp(x) )
+allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")]<-apply(allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")],2, function(x) median_imp(x) )
   
 
-apache_groups <- run_query( getSQL("../sql/apache_groups.sql" ))
+apache_groups <- run_query( getSQL("sql/apache_groups.sql" ))
 
 apache_groups<-apache_groups%>%
   mutate(
@@ -152,25 +154,24 @@ apache_groups<-apache_groups%>%
   AP_grp %in% c("Other","Sepsis","CardiacArrest","CVA","RespMedOther","ACS","GIBleed","CHF","Trauma","PNA") ~ AP_grp,
   TRUE   ~ 'Other'
   )
-
 )
+
+acute_physiology_score_components <- run_query( getSQL("sql/acute_physiology_score_components.sql" ))
 ```
 
 ### Other variables
 
 ```{r}
-basic_demographics <- run_query( getSQL("../sql/basic_demographics.sql" ))
+basic_demographics <- run_query( getSQL("sql/basic_demographics.sql" ))
 basic_demographics<-basic_demographics%>%mutate(
   # we are simplifying the ethnicity category
   ethnicity=if_else(ethnicity=='Caucasian','Caucasian','Not Caucasian')
 )
 
-gcs_baseline <- run_query( getSQL("../sql/gcs_baseline.sql" ))
-admission_sodium <- run_query( getSQL("../sql/admission_sodium.sql" ))
-charlson_score <- run_query( getSQL("../sql/charlson_score.sql" ))
-ventilated_binary_first_day <- run_query( getSQL("../sql/ventilated_binary_first_day.sql" ))
-acute_physiology_score_components <- run_query( getSQL("../analysis/sql/acute_physiology_score_components.sql" ))
-
+gcs_baseline <- run_query( getSQL("sql/gcs_baseline.sql" ))
+admission_sodium <- run_query( getSQL("sql/admission_sodium.sql" ))
+charlson_score <- run_query( getSQL("sql/charlson_score.sql" ))
+ventilated_binary_first_day <- run_query( getSQL("sql/ventilated_binary_first_day.sql" ))
 ```
 
 # Left Join
@@ -183,7 +184,7 @@ initial_dataset<-Reduce(function(...) merge(..., all.x=TRUE, by = "patientunitst
   ,charlson_score
   ,ventilated_binary_first_day
   ,apache_groups
-  #,acute_physiology_score_components
+  ,acute_physiology_score_components
   ,allapachevars
 ))
 ```
@@ -207,7 +208,7 @@ Unit type (medical, medical surgical, surgical, cardiac, cardiothoracic, and neu
 Mechanical ventilation during the first 24 hours of care was included as binary variable.
 
 ```{r}
-selected_df<-initial_dataset%>%select(
+selected_df<-initial_dataset%>%dplyr::select(
 # initial demographics  
 patientunitstayid,
 age,
@@ -238,7 +239,6 @@ meds,
 urine,
 wbc,
 temperature,
-respiratoryrate,
 heartrate,
 meanbp,
 ph,
@@ -290,7 +290,10 @@ day1verbal,
 day1motor,
 day1eyes,
 day1pao2,
-day1fio2
+day1fio2,
+respiratoryrate,
+MAP
+
 )
 
 # factorizing variables
@@ -308,9 +311,31 @@ selected_df$hosp_mortality<-as.factor(selected_df$hosp_mortality)
 We are not excluding patients with a baseline sodium outside of our groups.
 
 ```{r}
-cat('initial number of patients:',nrow(selected_df))
-selected_df<- selected_df[complete.cases(selected_df),]
-cat('\nfinal number of patients:',nrow(selected_df))
+# cat('Initial number of patients:',nrow(selected_df))
+# 
+# selected_df<- selected_df[complete.cases(selected_df),]
+# cat('Final number of patients:',nrow(selected_df))
+
+print('Initial number of patients:')
+a<-nrow(selected_df)
+a
+
+print('Patients with incomplete data that are excluded')
+selected_df<-selected_df[complete.cases(selected_df),]
+b<-nrow(selected_df)
+a-b
+
+print('Final number of patients:')
+c<-nrow(selected_df)
+
+
+flow_exclusions(
+  incl_counts = c(a, c),
+  total_label = "Initial Cohort",
+  incl_labels = c( "Final Number of patients"),
+  excl_labels = c("Patients with incomplete data that are excluded"),
+  percent_of_total = TRUE
+)
 ```
 
 # Addressing basseline sodium outliers
@@ -372,47 +397,60 @@ assign( paste('sodium_cat_',i,'_df',sep=''), sodium_split[[i]])
 
 ## Creating the datasets for the analysis
 
-I created 1 dataset per category that includes the category level and the reference level. I did this 7 times since category 5 is the reference and does not need a separate analysis.
+<!-- I created 1 dataset per category that includes the category level and the reference level. I did this 7 times since category 5 is the reference and does not need a separate analysis. -->
 
-I coded being on the reference as 0 and being on a different sodium category as 1.
+<!-- I coded being on the reference as 0 and being on a different sodium category as 1. -->
+
+<!-- ```{r} -->
+<!-- sodium_cat_1_df<-rbind(sodium_cat_1_df,sodium_cat_5_df) -->
+<!-- sodium_cat_2_df<-rbind(sodium_cat_2_df,sodium_cat_5_df) -->
+<!-- sodium_cat_3_df<-rbind(sodium_cat_3_df,sodium_cat_5_df) -->
+<!-- sodium_cat_4_df<-rbind(sodium_cat_4_df,sodium_cat_5_df) -->
+<!-- sodium_cat_6_df<-rbind(sodium_cat_6_df,sodium_cat_5_df) -->
+<!-- sodium_cat_7_df<-rbind(sodium_cat_7_df,sodium_cat_5_df) -->
+<!-- sodium_cat_8_df<-rbind(sodium_cat_8_df,sodium_cat_5_df) -->
+
+<!-- sodium_cat_1_df<-sodium_cat_1_df%>%mutate( -->
+<!--   sodium_cat=if_else(sodium_cat==5,'0Ref','cat_1') -->
+<!-- ) -->
+
+<!-- sodium_cat_2_df<-sodium_cat_2_df%>%mutate( -->
+<!--   sodium_cat=if_else(sodium_cat==5,'0Ref','cat_2') -->
+<!-- ) -->
+
+<!-- sodium_cat_3_df<-sodium_cat_3_df%>%mutate( -->
+<!--   sodium_cat=if_else(sodium_cat==5,'0Ref','cat_3') -->
+<!-- ) -->
+
+<!-- sodium_cat_4_df<-sodium_cat_4_df%>%mutate( -->
+<!--   sodium_cat=if_else(sodium_cat==5,'0Ref','cat_4') -->
+<!-- ) -->
+
+<!-- sodium_cat_6_df<-sodium_cat_6_df%>%mutate( -->
+<!--   sodium_cat=if_else(sodium_cat==5,'0Ref','cat_6') -->
+<!-- ) -->
+
+<!-- sodium_cat_7_df<-sodium_cat_7_df%>%mutate( -->
+<!--   sodium_cat=if_else(sodium_cat==5,'0Ref','cat_7') -->
+<!-- ) -->
+
+<!-- sodium_cat_8_df<-sodium_cat_8_df%>%mutate( -->
+<!--   sodium_cat=if_else(sodium_cat==5,'0Ref','cat_8') -->
+<!-- ) -->
+
+<!-- ``` -->
+
+<!-- # Creating sodium categories datasets -->
 
 ```{r}
-sodium_cat_1_df<-rbind(sodium_cat_1_df,sodium_cat_5_df)
-sodium_cat_2_df<-rbind(sodium_cat_2_df,sodium_cat_5_df)
-sodium_cat_3_df<-rbind(sodium_cat_3_df,sodium_cat_5_df)
-sodium_cat_4_df<-rbind(sodium_cat_4_df,sodium_cat_5_df)
-sodium_cat_6_df<-rbind(sodium_cat_6_df,sodium_cat_5_df)
-sodium_cat_7_df<-rbind(sodium_cat_7_df,sodium_cat_5_df)
-sodium_cat_8_df<-rbind(sodium_cat_8_df,sodium_cat_5_df)
-
-sodium_cat_1_df<-sodium_cat_1_df%>%mutate(
-  sodium_cat=if_else(sodium_cat==5,'0Ref','cat_1')
-)
-
-sodium_cat_2_df<-sodium_cat_2_df%>%mutate(
-  sodium_cat=if_else(sodium_cat==5,'0Ref','cat_2')
-)
-
-sodium_cat_3_df<-sodium_cat_3_df%>%mutate(
-  sodium_cat=if_else(sodium_cat==5,'0Ref','cat_3')
-)
-
-sodium_cat_4_df<-sodium_cat_4_df%>%mutate(
-  sodium_cat=if_else(sodium_cat==5,'0Ref','cat_4')
-)
-
-sodium_cat_6_df<-sodium_cat_6_df%>%mutate(
-  sodium_cat=if_else(sodium_cat==5,'0Ref','cat_6')
-)
-
-sodium_cat_7_df<-sodium_cat_7_df%>%mutate(
-  sodium_cat=if_else(sodium_cat==5,'0Ref','cat_7')
-)
-
-sodium_cat_8_df<-sodium_cat_8_df%>%mutate(
-  sodium_cat=if_else(sodium_cat==5,'0Ref','cat_8')
-)
-
+selected_df$sodium_cat<-as.numeric(as.character(selected_df$sodium_cat))
+sodium_cat_1_df<-selected_df%>%filter(sodium_cat%in%c(1,5))
+sodium_cat_2_df<-selected_df%>%filter(sodium_cat%in%c(2,5))
+sodium_cat_3_df<-selected_df%>%filter(sodium_cat%in%c(3,5))
+sodium_cat_4_df<-selected_df%>%filter(sodium_cat%in%c(4,5))
+sodium_cat_6_df<-selected_df%>%filter(sodium_cat%in%c(6,5))
+sodium_cat_7_df<-selected_df%>%filter(sodium_cat%in%c(7,5))
+sodium_cat_8_df<-selected_df%>%filter(sodium_cat%in%c(8,5))
 ```
 
 # Dataset Export
