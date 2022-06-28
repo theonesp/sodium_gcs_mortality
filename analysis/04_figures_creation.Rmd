@@ -204,7 +204,7 @@ mediation_results_propmediated<-rbind(mediation_results_propmediated,
                                       data.frame(Estimate = 0, cat = 5, results = "Prop. Mediated (average)"))
 
 ggplot(data=mediation_results_propmediated,aes(x=cat,y=Estimate*100))+
-  geom_bar(stat='identity',fill="#2980b9")+
+  geom_bar(stat='identity',fill="#27ae60")+
   xlab('Baseline Sodium Category')+
   ylab('%')+
   geom_text(data=mediation_results_propmediated,aes(label = paste(round(Estimate*100,2),'%')), colour = "#2c3e50", vjust = 1.5)+
@@ -221,7 +221,7 @@ ggplot(data=mediation_results_propmediated,aes(x=cat,y=Estimate*100))+
                 ,alpha=0.4
                 ,inherit.aes=FALSE
                 ,width=0.2
-                ,fill ='#27ae60')+
+                ,fill ='#2980b9')+
   scale_y_continuous(
   position ="right",
     
@@ -231,7 +231,10 @@ ggplot(data=mediation_results_propmediated,aes(x=cat,y=Estimate*100))+
   # Add a second axis and specify its features
   sec.axis = sec_axis(~(./100)+1, name="Odds ratio (95%CI) of hospital mortality")
   )+
-  labs(caption="Dots: Odds Ratio of Hospital Mortality\nGreen Ribbon:Odds ratio (95%CI)\nBlue Bars: Proportion of mortality mediated by GCS score")
+  labs(caption="Green Bars: Proportion of mortality mediated by GCS score\nBlue Dots: Odds Ratio of Hospital Mortality\nBlue Ribbon:Odds ratio (95%CI)")+
+  theme(plot.caption = element_text(hjust = 0, face= "italic"), #Default is hjust=1
+        plot.title.position = "plot", #NEW parameter. Apply for subtitle too.
+        plot.caption.position =  "plot") #NEW parameter
 
 
 ```
