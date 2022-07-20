@@ -327,7 +327,7 @@ a-b
 
 print('Final number of patients:')
 c<-nrow(selected_df)
-
+c
 
 flow_exclusions(
   incl_counts = c(a, c),
@@ -377,6 +377,20 @@ selected_df<-selected_df%>%mutate(
 )
 
 selected_df$sodium_cat<-as.factor(selected_df$sodium_cat)
+```
+
+## Age Categories
+
+```{r}
+selected_df%<>%mutate(
+  age_cat = case_when(
+    between(age,18,30) ~ '18 - <30',
+    between(age,30,50) ~ '30 - <50',
+    between(age,50,65) ~ '50 - <65',
+    sodium1>= 65 ~ '>=65',
+    
+  )
+)
 ```
 
 # Separate Sodium bands datasets
