@@ -393,6 +393,13 @@ selected_df%<>%mutate(
 )
 ```
 
+# Setting proper datatype
+
+```{r}
+selected_df%<>%mutate_at(c('cirrhosis','aids','leukemia','immunosuppression','charlson_chf1','charlson_liver1'), as.factor)
+```
+
+
 # Separate Sodium bands datasets
 
 ## Creating the subsets
