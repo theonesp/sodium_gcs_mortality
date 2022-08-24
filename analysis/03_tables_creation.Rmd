@@ -12,10 +12,11 @@ output: html_notebook
 library(tableone)
 library(magrittr)
 library(officer)
-library(xlsx)
 library(dplyr)
 library(sqldf)
 library(summarytools)
+library(table1)
+library(kableExtra)
 ```
 
 ## Table 1
@@ -27,11 +28,54 @@ dataframe_for_table1<-selected_df
 dataframe_for_table1$charlson_chf1<-as.factor(dataframe_for_table1$charlson_chf1)
 dataframe_for_table1$charlson_liver1<-as.factor(dataframe_for_table1$charlson_liver1)
 
-
+# we are re-difining the 'Others' category
 dataframe_for_table1$unittype<-plyr::revalue(
   dataframe_for_table1$unittype,c( 'Neuro ICU'='Others' , 'SICU'= 'Others', 'Cardiac ICU'='Others' , 'CCU-CTICU'='Others'  ,'CSICU'='Others' , 'CTICU'='Others')
 )
 
 table1(~ age + gender + AP_grp +ethnicity + AP_grp + mechvent_day01 + unittype + charlson_chf1 + charlson_liver1|sodium_cat,data = dataframe_for_table1)
+```
+
+## Table 2
+
+Supplemental Table 2: Association between serum sodium level and Glasgow Coma Scale.
+
+```{r,echo = F}
+# we are re-difining the 'Others' category
+dataframe_for_table1%<>%mutate(
+gcs_noimpairment = as.factor(if_else( gcs_baseline==15, 1,0)),
+gcs_comatose = as.factor(if_else( between(gcs_baseline,3,8), 1,0))
+)
+
+stratifyby<-"sodium_cat"
+
+vars_in_table1<-c('gcs_baseline','gcs_noimpairment', 'gcs_comatose')
+cat_variables<-rep(NA, length(vars_in_table1))
+
+# detects whether a variable is categorical or not based on the number of distinct variables per category (10 is the threshold)
+cont<-1
+for (i in 1:length(vars_in_table1) ) {
+  if ( n_distinct(dataframe_for_table1[vars_in_table1[i] ])<=10 ) {
+    print(i)
+    print(vars_in_table1[i])
+    print(names(dataframe_for_table1[vars_in_table1[i]]))
+    cat_variables[cont]<-names(dataframe_for_table1[vars_in_table1[i]])
+    cont<-cont+1
+  }
+}  
+cat_variables<-cat_variables[!is.na(cat_variables)]
+table1_base<-print(CreateTableOne(vars = vars_in_table1
+                                   , strata = stratifyby
+                                  , factorVars = cat_variables
+    ,data = dataframe_for_table1, addOverall=T),varLabels = T)
+
+
+# run this in console for html output, the code below uses library kableExtra::
+# the line add_header_above() will need to be modified depending on the number of columns of the table
+starification_cats<-n_distinct(dataframe_for_table1[,stratifyby])
+table1_base %>%
+  kbl(caption = "Table 1 of base model" , align = "c") %>%
+  kable_classic_2(full_width = F, html_font = "Cambria")%>%
+  add_header_above(c(" "," ", 'Sodium Group' = starification_cats," ", "" ))
 ```
 
