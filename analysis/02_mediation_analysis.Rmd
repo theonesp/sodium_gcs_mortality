@@ -3,14 +3,14 @@ title: "Sodium GCS Mediation Mortality (Analysis)"
 author: "Sicheng, Miguel"
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output:
-  html_notebook:
+  # html_notebook:
     code_folding: hide
     number_sections: yes
     theme: flatly
     toc: yes
     toc_float: yes
 
-knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = encoding, output_file = paste0(substr(inputFile,1,nchar(inputFile)-4)," ",Sys.Date(),'.html')) })
+# knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = encoding, output_file = paste0(substr(inputFile,1,nchar(inputFile)-4)," ",Sys.Date(),'.html')) })
 ---
 
 # Environment

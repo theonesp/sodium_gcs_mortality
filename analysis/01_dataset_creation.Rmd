@@ -3,7 +3,7 @@ title: "Sodium GCS Mediation Mortality"
 author: Miguel Ángel Armengol de la Hoz
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output:
-  html_notebook:
+  # html_notebook:
     code_folding: hide
     number_sections: yes
     theme: flatly

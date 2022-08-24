@@ -23,8 +23,6 @@ library(mediation)
 library(plotly)
 library(cowplot)
 '%!in%' <- function(x,y)!('%in%'(x,y))
-
-
 ```
 
 # Appending results for plot
@@ -213,7 +211,7 @@ ggplot(data=mediation_results_propmediated,aes(x=cat,y=Estimate*100))+
   # labs(colour='Mortality Risk', fill='Proportion Mediated') +
   theme(legend.position="bottom")+
   theme_minimal()+
-  scale_x_continuous(breaks = c(1,2,3,4,5,6,7,8),labels = c("<120","120-125","125-130","130-135","135-140(reference)","140-145","145-150",">150")) +
+  scale_x_continuous(breaks = c(1,2,3,4,5,6,7,8),labels = c("<120","120- <125","125- <130","130- <135","135- <140\n(Reference)","140- <145","145- <150",">150")) +
   geom_point(data = total_effect,aes(x=cat,y=(or-1)*100),colour="#34495e")+
   geom_line(data = total_effect,aes(x=cat,y=(or-1)*100),colour="#34495e")+
   geom_ribbon(data=total_effect
