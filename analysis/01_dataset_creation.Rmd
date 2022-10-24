@@ -57,11 +57,16 @@ This chunks also creates the run_query and get_sql function.
 
 ```{r setup, include=FALSE}
 # Updated for our year
-project_id <- "hst-953-2018"
+project_id <- "mvte-318912"
+#project_id <- "hst-953-2018"
 options(httr_oauth_cache=FALSE)
 # Function that takes in a sql command and runs it on bigquery
 run_query <- function(query){
-  data <- query_exec(query, project=project_id, use_legacy_sql=FALSE,max_pages = Inf)
+  #run query
+  data <- bq_project_query(project_id, query = query)
+  ## download results
+  data <- bq_table_download(data)
+  #data <- query_exec(query, project=project_id, use_legacy_sql=FALSE,max_pages = Inf)
   return(data)
 }
 
@@ -135,6 +140,11 @@ minus_one_removal <- function(x) {
   return(minus_one_remov)
 }
 
+na_replace_zero <- function(x) {
+  replace_zero <- ifelse(is.na((x)),0,x)
+  return(replace_zero)
+}
+
 median_imp <- function(x) {
   median_impu <- if_else(is.na(x),median(x,na.rm = T),x)
   return(median_impu)
@@ -142,7 +152,7 @@ median_imp <- function(x) {
 
 allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")]<-apply(allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")],2, function(x) minus_one_removal(x) )
 
-allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")]<-apply(allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")],2, function(x) median_imp(x) )
+#allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")]<-apply(allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")],2, function(x) median_imp(x) )
   
 
 apache_groups <- run_query( getSQL("sql/apache_groups.sql" ))
@@ -315,13 +325,14 @@ We are not excluding patients with a baseline sodium outside of our groups.
 # 
 # selected_df<- selected_df[complete.cases(selected_df),]
 # cat('Final number of patients:',nrow(selected_df))
-
 print('Initial number of patients:')
 a<-nrow(selected_df)
 a
 
+#exclude missing GCS sodium at baseline. Update here since labs and measurements weren't imputated before.
 print('Patients with incomplete data that are excluded')
-selected_df<-selected_df[complete.cases(selected_df),]
+#selected_df<-selected_df[complete.cases(selected_df),]
+selected_df<-selected_df%>%filter(!is.na(gcs_baseline)&!is.na(sodium1)&!is.na(hosp_mortality))
 b<-nrow(selected_df)
 a-b
 
@@ -333,7 +344,7 @@ flow_exclusions(
   incl_counts = c(a, c),
   total_label = "Initial Cohort",
   incl_labels = c( "Final Number of patients"),
-  excl_labels = c("Patients with incomplete data that are excluded"),
+  excl_labels = c("Patients with missing sodium, gcs and hospital discharge stauts are excluded"),
   percent_of_total = TRUE
 )
 ```
@@ -464,14 +475,20 @@ assign( paste('sodium_cat_',i,'_df',sep=''), sodium_split[[i]])
 <!-- # Creating sodium categories datasets -->
 
 ```{r}
-selected_df$sodium_cat<-as.numeric(as.character(selected_df$sodium_cat))
-sodium_cat_1_df<-selected_df%>%filter(sodium_cat%in%c(1,5))
-sodium_cat_2_df<-selected_df%>%filter(sodium_cat%in%c(2,5))
-sodium_cat_3_df<-selected_df%>%filter(sodium_cat%in%c(3,5))
-sodium_cat_4_df<-selected_df%>%filter(sodium_cat%in%c(4,5))
-sodium_cat_6_df<-selected_df%>%filter(sodium_cat%in%c(6,5))
-sodium_cat_7_df<-selected_df%>%filter(sodium_cat%in%c(7,5))
-sodium_cat_8_df<-selected_df%>%filter(sodium_cat%in%c(8,5))
+selected_df_imputed<-selected_df
+selected_df_imputed[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2","MAP","respiratoryrate")]<-apply(selected_df_imputed[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2","MAP","respiratoryrate")],2, function(x) median_imp(x) )
+
+selected_df_imputed[,c('cirrhosis','aids','leukemia','immunosuppression','charlson_chf1','charlson_liver1')]<-apply(selected_df_imputed[,c('cirrhosis','aids','leukemia','immunosuppression','charlson_chf1','charlson_liver1')],2, function(x) na_replace_zero(x) )
+
+
+selected_df_impute$sodium_cat<-as.numeric(as.character(selected_df$sodium_cat))
+sodium_cat_1_df<-selected_df_imputed%>%filter(sodium_cat%in%c(1,5))
+sodium_cat_2_df<-selected_df_imputed%>%filter(sodium_cat%in%c(2,5))
+sodium_cat_3_df<-selected_df_imputed%>%filter(sodium_cat%in%c(3,5))
+sodium_cat_4_df<-selected_df_imputed%>%filter(sodium_cat%in%c(4,5))
+sodium_cat_6_df<-selected_df_imputed%>%filter(sodium_cat%in%c(6,5))
+sodium_cat_7_df<-selected_df_imputed%>%filter(sodium_cat%in%c(7,5))
+sodium_cat_8_df<-selected_df_imputed%>%filter(sodium_cat%in%c(8,5))
 ```
 
 <!-- # Dataset Export -->
