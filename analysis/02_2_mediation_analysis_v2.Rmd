@@ -70,32 +70,9 @@ extract_mediation_summary <- function (x) {
                       paste(clp, "% CI Upper", sep = ""), "p-value")
   smat
 }
-
-
-apcvar<-fread("/Users/sichenghao/Desktop/Sodium/allapachevars.csv")
-apcvar$respiratoryrate<-NULL
-
-apc_full<-fread("/Users/sichenghao/Desktop/Sodium/apachePatientResult.csv")
-apc<-apc_full%>%filter(apacheversion=="IV")%>%select(patientunitstayid,apachescore)
-data_v3 <- readRDS("~/Desktop/Sodium/data_v3.Rds")
-
-data<-inner_join(data_v3,apcvar,by = "patientunitstayid")#remove stays without apache var
-data<-left_join(data,apc, by = "patientunitstayid")
-data$hosp_mortality<-as.numeric(as.character(data$hosp_mortality))#convert variables to 0(alive)
-
-
-data$sodium_cat<-as.numeric(as.character(data$sodium_cat))
-sodium_cat_1_df<-data%>%filter(sodium_cat%in%c(1,5))
-sodium_cat_2_df<-data%>%filter(sodium_cat%in%c(2,5))
-sodium_cat_3_df<-data%>%filter(sodium_cat%in%c(3,5))
-sodium_cat_4_df<-data%>%filter(sodium_cat%in%c(4,5))
-sodium_cat_6_df<-data%>%filter(sodium_cat%in%c(6,5))
-sodium_cat_7_df<-data%>%filter(sodium_cat%in%c(7,5))
-sodium_cat_8_df<-data%>%filter(sodium_cat%in%c(8,5))
-
-
-
 ```
+
+
 
 ### Inclusion Criteria
 1. 
@@ -112,7 +89,7 @@ Cohort before exclusion: 100773
 data<-selected_df_imputed%>%dplyr::select(sodium_cat,hosp_mortality,gcs_baseline,normal_gcs,AP_grp,ethnicity,gender,age,MAP,temperature,heartrate,respiratoryrate,mechvent_day01,day1fio2,day1pao2,pco2,ph,urine,creatinine,albumin,bilirubin,wbc,cirrhosis,aids,leukemia, immunosuppression,charlson_chf1,charlson_liver1)
 sum(complete.cases(data))
 nrow(data)
-temp<-data[which(!complete.cases(data)),]
+temp<-data[which(!complete.cases(data)),]#37 missing gender will be excluded in the analysis
 # some data contain missing gender
 
 #Creating factor data for table1
@@ -127,13 +104,6 @@ temp<-data[which(!complete.cases(data)),]
 #                         levels = c(0,1),
 #                         labels = c("No","Yes"))
 ```
-
-## Table 1
-```{r,echo = F}
-#table1(~hosp_mortality + gcs_baseline + normal_gcs + AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1 | sodium_cat,data = data)
-
-```
-
 
 # Mediation package
 
@@ -409,8 +379,8 @@ mediation_results_cat8_sum
 
 ```{r}
 sens.out8 <- medsens(mediation_results_cat8, rho.by = 0.1, effect.type = "indirect", sims = 200)
-#summary(sens.out8)
-#plot(sens.out8, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 0.05))
+summary(sens.out8)
+plot(sens.out8, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 0.05))
 
 
 ```

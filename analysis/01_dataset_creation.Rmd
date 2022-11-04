@@ -481,7 +481,7 @@ selected_df_imputed[,c("eyes","motor","verbal","meds","urine","wbc","temperature
 selected_df_imputed[,c('cirrhosis','aids','leukemia','immunosuppression','charlson_chf1','charlson_liver1')]<-apply(selected_df_imputed[,c('cirrhosis','aids','leukemia','immunosuppression','charlson_chf1','charlson_liver1')],2, function(x) na_replace_zero(x) )
 
 
-selected_df_impute$sodium_cat<-as.numeric(as.character(selected_df$sodium_cat))
+selected_df_imputed$sodium_cat<-as.numeric(as.character(selected_df_imputed$sodium_cat))
 sodium_cat_1_df<-selected_df_imputed%>%filter(sodium_cat%in%c(1,5))
 sodium_cat_2_df<-selected_df_imputed%>%filter(sodium_cat%in%c(2,5))
 sodium_cat_3_df<-selected_df_imputed%>%filter(sodium_cat%in%c(3,5))
