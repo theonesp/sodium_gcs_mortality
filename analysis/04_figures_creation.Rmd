@@ -3,7 +3,7 @@ title: "Sodium GCS Mediation Mortality (Analysis) - Figures"
 author: "Sicheng, Miguel"
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output:
-  html_notebook:
+  # html_notebook:
     code_folding: hide
     number_sections: yes
     theme: flatly
@@ -275,5 +275,32 @@ p2<-ggplot(data=mediation_results_propmediated,aes(x=cat,y=Estimate*100,fill=res
   scale_x_continuous(breaks = c(1,2,3,4,6,7,8)) 
 
 plot_grid(p2, p1, scale = c(1, 1),ncol = 1, align = "v")
+```
+# Sensitivity analysis plot grid
+
+Ref.: 
+plot(sens.out2, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 0.05))
+plot(sens.out8, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 0.05))
+
+```{r}
+plots <- list()
+
+# Use a loop to generate and store the plots
+for(i in 1:8){
+  if(i == 5) next # Skip plot number 5
+  
+  # Generate a plot
+  sens.out <- get(paste("sens.out", i, sep = "")) 
+  p <- plot(sens.out, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 0.05))
+  
+  # Add a title to the plot
+  p <- p + ggtitle(paste("Category", i))
+  
+  # Store the plot in the list
+  plots[[i]] <- p
+}
+
+# Plot the plots in a 3x3 grid
+grid.arrange(grobs = plots, nrow = 3)
 ```
 

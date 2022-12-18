@@ -386,6 +386,7 @@ plot(sens.out8, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05,
 ```
 
 ## Results in table
+
 ```{r}
 kable(mediation_results_all[,c(5,6,1,2,3,4)])
 kable(total_effect)

@@ -3,7 +3,7 @@ title: "Sodium GCS Mediation Mortality"
 author: Miguel Ángel Armengol de la Hoz
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output:
-  html_notebook:
+  # html_notebook:
     code_folding: hide
     number_sections: yes
     theme: flatly
@@ -45,6 +45,23 @@ winsorize_x = function(x, cut = 0.005){
   j = which(x <= cut_point_bottom) 
   x[j] = cut_point_bottom
   return(x)
+}
+
+
+# imputing variables, normally -1 means missing so we are removing them in the appropriate fields and then performing median imputation
+minus_one_removal <- function(x) {
+  minus_one_remov <- ifelse(x==-1,as.logical(NA),x)
+  return(minus_one_remov)
+}
+
+na_replace_zero <- function(x) {
+  replace_zero <- ifelse(is.na((x)),0,x)
+  return(replace_zero)
+}
+
+median_imp <- function(x) {
+  median_impu <- if_else(is.na(x),median(x,na.rm = T),x)
+  return(median_impu)
 }
 
 ```
@@ -134,21 +151,6 @@ allapachevars<-allapachevars%>%mutate(
   
 )
 
-# imputing variables, normally -1 means missing so we are removing them in the appropriate fields and then performing median imputation
-minus_one_removal <- function(x) {
-  minus_one_remov <- ifelse(x==-1,as.logical(NA),x)
-  return(minus_one_remov)
-}
-
-na_replace_zero <- function(x) {
-  replace_zero <- ifelse(is.na((x)),0,x)
-  return(replace_zero)
-}
-
-median_imp <- function(x) {
-  median_impu <- if_else(is.na(x),median(x,na.rm = T),x)
-  return(median_impu)
-}
 
 allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")]<-apply(allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")],2, function(x) minus_one_removal(x) )
 

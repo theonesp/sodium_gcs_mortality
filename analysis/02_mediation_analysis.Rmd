@@ -3,7 +3,7 @@ title: "Sodium GCS Mediation Mortality (Analysis)"
 author: "Sicheng, Miguel"
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output:
-  html_notebook:
+  # html_notebook:
     code_folding: hide
     number_sections: yes
     theme: flatly
@@ -111,7 +111,7 @@ temp<-data[which(!complete.cases(data)),]#37 missing gender will be excluded in 
 
 ### Mediation analysis
 
-```{r eval=FALSE, include=FALSE}
+```{r}
 total_effect<-NULL
 sodium_cat_1_df$sodium_cat<-as.factor(sodium_cat_1_df$sodium_cat)
 sodium_cat_1_df$sodium_cat<-relevel(sodium_cat_1_df$sodium_cat,ref = "5")
@@ -149,17 +149,15 @@ mediation_results_cat1_sum
 
 ### Sensitivity Analisys
 
-```{r eval=FALSE, include=FALSE}
+```{r}
 sens.out1 <- medsens(mediation_results_cat1, rho.by = 0.1, effect.type = "indirect", sims = 200)
-summary(sens.out1)
-plot(sens.out1, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 0.05))
 ```
 
 ## Baseline sodium_cat_2
 
 ### Mediation analysis
 
-```{r eval=FALSE, include=FALSE}
+```{r}
 sodium_cat_2_df$sodium_cat<-as.factor(sodium_cat_2_df$sodium_cat)
 sodium_cat_2_df$sodium_cat<-relevel(sodium_cat_2_df$sodium_cat,ref = "5")
 fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat + AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1
@@ -189,17 +187,15 @@ mediation_results_cat2_sum
 
 ### Sensitivity Analisys
 
-```{r eval=FALSE, include=FALSE}
+```{r}
 sens.out2 <- medsens(mediation_results_cat2, rho.by = 0.1, effect.type = "indirect", sims = 200)
-summary(sens.out2)
-plot(sens.out2, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 0.05))
 ```
 
 ## Baseline sodium_cat_3
 
 ### Mediation analysis
 
-```{r eval=FALSE, include=FALSE}
+```{r}
 sodium_cat_3_df$sodium_cat<-as.factor(sodium_cat_3_df$sodium_cat)
 sodium_cat_3_df$sodium_cat<-relevel(sodium_cat_3_df$sodium_cat,ref = "5")
 fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+respiratoryrate+MAP
@@ -227,17 +223,15 @@ mediation_results_cat3_sum
 
 ### Sensitivity Analisys
 
-```{r eval=FALSE, include=FALSE}
+```{r}
 sens.out3 <- medsens(mediation_results_cat3, rho.by = 0.1, effect.type = "indirect", sims = 200)
-summary(sens.out3)
-plot(sens.out3, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 0.05))
 ```
 
 ## Baseline sodium_cat_4
 
 ### Mediation analysis
 
-```{r eval=FALSE, include=FALSE}
+```{r}
 sodium_cat_4_df$sodium_cat<-as.factor(sodium_cat_4_df$sodium_cat)
 sodium_cat_4_df$sodium_cat<-relevel(sodium_cat_4_df$sodium_cat,ref = "5")
 fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat+AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1
@@ -265,16 +259,14 @@ mediation_results_cat4_sum
 
 ### Sensitivity Analisys
 
-```{r eval=FALSE, include=FALSE}
+```{r}
 sens.out4 <- medsens(mediation_results_cat4, rho.by = 0.1, effect.type = "indirect", sims = 200)
-summary(sens.out4)
-plot(sens.out4, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 0.05))
 ```
 ## Baseline sodium_cat_6
 
 ### Mediation analysis
 
-```{r eval=FALSE, include=FALSE}
+```{r}
 sodium_cat_6_df$sodium_cat<-as.factor(sodium_cat_6_df$sodium_cat)
 sodium_cat_6_df$sodium_cat<-relevel(sodium_cat_6_df$sodium_cat,ref = "5")
 fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat+AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1
@@ -304,15 +296,13 @@ mediation_results_cat6_sum
 
 ```{r}
 sens.out6 <- medsens(mediation_results_cat6, rho.by = 0.1, effect.type = "indirect", sims = 200)
-summary(sens.out6)
-plot(sens.out6, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 0.05))
 ```
 
 ## Baseline sodium_cat_7
 
 ### Mediation analysis
 
-```{r eval=FALSE, include=FALSE}
+```{r}
 sodium_cat_7_df$sodium_cat<-as.factor(sodium_cat_7_df$sodium_cat)
 sodium_cat_7_df$sodium_cat<-relevel(sodium_cat_7_df$sodium_cat,ref = "5")
 fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat+AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1
@@ -340,17 +330,15 @@ mediation_results_cat7_sum
 
 ### Sensitivity Analisys
 
-```{r eval=FALSE, include=FALSE}
+```{r}
 sens.out7 <- medsens(mediation_results_cat7, rho.by = 0.1, effect.type = "indirect", sims = 200)
-summary(sens.out7)
-plot(sens.out7, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 0.05))
 ```
 
 ## Baseline sodium_cat_8
 
 ### Mediation analysis
 
-```{r eval=FALSE, include=FALSE}
+```{r}
 sodium_cat_8_df$sodium_cat<-as.factor(sodium_cat_8_df$sodium_cat)
 sodium_cat_8_df$sodium_cat<-relevel(sodium_cat_8_df$sodium_cat,ref = "5")
 fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat + AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1
@@ -377,8 +365,6 @@ mediation_results_cat8_sum
 
 ### Sensitivity Analisys
 
-```{r eval=FALSE, include=FALSE}
+```{r}
 sens.out8 <- medsens(mediation_results_cat8, rho.by = 0.1, effect.type = "indirect", sims = 200)
-summary(sens.out8)
-plot(sens.out8, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 0.05))
 ```
