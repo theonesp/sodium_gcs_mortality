@@ -1,4 +1,6 @@
   -- basic demographics
+--       CASE WHEN pt.gender = 'Male' THEN 1
+--            WHEN pt.gender = 'Female' THEN 2  
 WITH
   sq AS(
   SELECT

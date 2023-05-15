@@ -74,8 +74,8 @@ This chunks also creates the run_query and get_sql function.
 
 ```{r setup, include=FALSE}
 # Updated for our year
-project_id <- "mvte-318912"
-#project_id <- "hst-953-2018"
+#project_id <- "mvte-318912"
+project_id <- "hst-953-2018"
 options(httr_oauth_cache=FALSE)
 # Function that takes in a sql command and runs it on bigquery
 run_query <- function(query){
@@ -169,6 +169,8 @@ apache_groups<-apache_groups%>%
 )
 
 acute_physiology_score_components <- run_query( getSQL("sql/acute_physiology_score_components.sql" ))
+
+apachepatientresult <- run_query(getSQL("sql/apachepatientresult.sql" ))
 ```
 
 ### Other variables
@@ -198,6 +200,7 @@ initial_dataset<-Reduce(function(...) merge(..., all.x=TRUE, by = "patientunitst
   ,apache_groups
   ,acute_physiology_score_components
   ,allapachevars
+  ,apachepatientresult
 ))
 ```
 
@@ -228,7 +231,9 @@ gender,
 ethnicity, 
 hospitaladmitsource,
 unittype, 
+# apache related
 AP_grp,
+apachescore,
 # comorb
 charlson_chf1,
 charlson_liver1,
@@ -356,7 +361,6 @@ flow_exclusions(
 ```{r}
 # Winsorizing outliers
 selected_df$sodium1<-winsorize_x(selected_df$sodium1)
-
 ```
 
 # New variables creation
@@ -429,52 +433,7 @@ assign( paste('sodium_cat_',i,'_df',sep=''), sodium_split[[i]])
   }
 ```
 
-## Creating the datasets for the analysis
-
-<!-- I created 1 dataset per category that includes the category level and the reference level. I did this 7 times since category 5 is the reference and does not need a separate analysis. -->
-
-<!-- I coded being on the reference as 0 and being on a different sodium category as 1. -->
-
-<!-- ```{r} -->
-<!-- sodium_cat_1_df<-rbind(sodium_cat_1_df,sodium_cat_5_df) -->
-<!-- sodium_cat_2_df<-rbind(sodium_cat_2_df,sodium_cat_5_df) -->
-<!-- sodium_cat_3_df<-rbind(sodium_cat_3_df,sodium_cat_5_df) -->
-<!-- sodium_cat_4_df<-rbind(sodium_cat_4_df,sodium_cat_5_df) -->
-<!-- sodium_cat_6_df<-rbind(sodium_cat_6_df,sodium_cat_5_df) -->
-<!-- sodium_cat_7_df<-rbind(sodium_cat_7_df,sodium_cat_5_df) -->
-<!-- sodium_cat_8_df<-rbind(sodium_cat_8_df,sodium_cat_5_df) -->
-
-<!-- sodium_cat_1_df<-sodium_cat_1_df%>%mutate( -->
-<!--   sodium_cat=if_else(sodium_cat==5,'0Ref','cat_1') -->
-<!-- ) -->
-
-<!-- sodium_cat_2_df<-sodium_cat_2_df%>%mutate( -->
-<!--   sodium_cat=if_else(sodium_cat==5,'0Ref','cat_2') -->
-<!-- ) -->
-
-<!-- sodium_cat_3_df<-sodium_cat_3_df%>%mutate( -->
-<!--   sodium_cat=if_else(sodium_cat==5,'0Ref','cat_3') -->
-<!-- ) -->
-
-<!-- sodium_cat_4_df<-sodium_cat_4_df%>%mutate( -->
-<!--   sodium_cat=if_else(sodium_cat==5,'0Ref','cat_4') -->
-<!-- ) -->
-
-<!-- sodium_cat_6_df<-sodium_cat_6_df%>%mutate( -->
-<!--   sodium_cat=if_else(sodium_cat==5,'0Ref','cat_6') -->
-<!-- ) -->
-
-<!-- sodium_cat_7_df<-sodium_cat_7_df%>%mutate( -->
-<!--   sodium_cat=if_else(sodium_cat==5,'0Ref','cat_7') -->
-<!-- ) -->
-
-<!-- sodium_cat_8_df<-sodium_cat_8_df%>%mutate( -->
-<!--   sodium_cat=if_else(sodium_cat==5,'0Ref','cat_8') -->
-<!-- ) -->
-
-<!-- ``` -->
-
-<!-- # Creating sodium categories datasets -->
+# Imputing missing values
 
 ```{r}
 selected_df_imputed<-selected_df

@@ -115,7 +115,7 @@ temp<-data[which(!complete.cases(data)),]#37 missing gender will be excluded in 
 total_effect<-NULL
 sodium_cat_1_df$sodium_cat<-as.factor(sodium_cat_1_df$sodium_cat)
 sodium_cat_1_df$sodium_cat<-relevel(sodium_cat_1_df$sodium_cat,ref = "5")
-fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat+AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1
+fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat+ AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1
 
                    , sodium_cat_1_df
 ,family = binomial)

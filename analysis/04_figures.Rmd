@@ -21,16 +21,17 @@ library(dplyr)
 library(ggplot2)
 library(mediation)
 library(plotly)
-library(cowplot)
+library(gridExtra)
+library(stringi)
 '%!in%' <- function(x,y)!('%in%'(x,y))
 ```
 
 # Appending results for plot
 
- - *ACME:*  Average Causal Mediation Effects. This is the indirect effect of the IV on the outcome that goes through the mediator.
- - *ADE:*  Average direct effects. It describes the direct effect of the IV on the Outcome.
- - *Total Effect* the Total Effect (direct + indirect) of the IV on the Outcome.
- - *Prop. Mediated* describes the proportion of the effect of the IV on the Outcome that goes through the mediator. It’s calculated by dividing the ACME through the total effect.
+-   *ACME:* Average Causal Mediation Effects. This is the indirect effect of the IV on the outcome that goes through the mediator.
+-   *ADE:* Average direct effects. It describes the direct effect of the IV on the Outcome.
+-   *Total Effect* the Total Effect (direct + indirect) of the IV on the Outcome.
+-   *Prop. Mediated* describes the proportion of the effect of the IV on the Outcome that goes through the mediator. It's calculated by dividing the ACME through the total effect.
 
 ```{r}
 # we want to be able to know which dataset our results are coming from
@@ -74,7 +75,56 @@ results_overall<-rbind(mediation_results_all,total_effect_copy)
 #fwrite(results_overall,file = "results_table.csv")
 ```
 
-# Individual plots
+
+# Final figures
+
+We are going to plot the OR of the estimates. The most interesting metrics to plot are Total Effect and Proportion Mediated
+
+## Figure 3: Prop. Mediated + Total Effect
+
+```{r }
+mediation_results_propmediated<-mediation_results_all%>%
+  filter(results %in% c("Prop. Mediated (average)") ) %>%
+  dplyr::select(Estimate,cat,results)
+
+mediation_results_propmediated<-rbind(mediation_results_propmediated,
+                                      data.frame(Estimate = 0, cat = 5, results = "Prop. Mediated (average)"))
+
+spline_x <-spline(total_effect$cat, (total_effect$or - 1) * 100, n = 1000)$x
+spline_hi <-spline(total_effect$cat, (total_effect$or.ub - 1) * 100, n = 1000)$y
+spline_lo <-spline(total_effect$cat, (total_effect$or.lb - 1) * 100, n = 1000)$y
+
+foo_ribbon <-data.frame(spline_x, spline_hi, spline_lo)
+
+p <- ggplot(data = mediation_results_propmediated, aes(x = cat, y = Estimate * 100)) +
+  geom_bar(stat = 'identity', fill = "#27ae60") +
+  xlab('Baseline Sodium Category') +
+  ylab('%') +
+  geom_text(data = mediation_results_propmediated, aes(label = paste(round(Estimate * 100, 2), '%')), colour = "#2c3e50", vjust = 1.5) +
+  scale_y_continuous(breaks = c(0, 50, 100)) +
+  theme(legend.position = "bottom", plot.title.position = "plot", plot.caption.position =  "plot") +
+  theme_minimal() +
+  scale_x_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7, 8),
+                     labels = c("<120", "120- <125", "125- <130", "130- <135", "135- <140\n(Reference)", "140- <145", "145- <150", ">150")) +
+  geom_point(data = total_effect, aes(x = cat, y = (or - 1) * 100), colour = "#34495e") +
+  geom_line(data = total_effect, aes(x = cat, y = (or - 1) * 100), colour = "#34495e") +
+  geom_ribbon(data = foo_ribbon, aes(x = spline_x, y = NULL, ymin = spline_lo, ymax = spline_hi),
+              alpha = 0.4, inherit.aes = FALSE, width = 0.2, fill = '#2980b9') +
+  scale_y_continuous(position = "right",
+                     name = "Proportion of mortality mediated by GCS score",
+                     sec.axis = sec_axis(~(. / 100) + 1, name = "Odds ratio (95%CI) of hospital mortality")) +
+  labs(caption = "Green Bars: Proportion of mortality mediated by GCS score\nBlue Dots: Odds Ratio of Hospital Mortality\nBlue Ribbon: Odds ratio's 95% CI") 
+
+p
+
+
+# Export the ggplot figure as a TIFF image
+tiff("figure3.tiff", width = 800, height = 600, res = 300)
+print(p)
+dev.off()
+
+```
+# Deprecated figures
 
 ## Prop. Mediated
 
@@ -119,7 +169,6 @@ ggplot(data=mediation_results_filtered,aes(x=cat,y=Estimate,colour=results,fill=
   ggtitle('ACME\nAverage Causal Mediation Effects\nIndirect effect of Sodium on mortality that goes through the mediator (GCS)')+
   scale_x_continuous(breaks = c(1,2,3,4,6,7,8))
 ```
-
 
 ## Direct Effect
 
@@ -185,122 +234,5 @@ ggplot(data=total_effect,aes(x=cat,y=or))+
     theme_minimal()+
   ggtitle('Total Effect')+
   scale_x_continuous(breaks = c(1,2,3,4,5,6,7,8))
-```
-
-# Combined Plots
-
-We are going to plot the OR of the estimates. The most interesting metrics to plot are Total Effect and Proportion Mediated
-
-## Prop. Mediated + Total Effect
-
-```{r }
-mediation_results_propmediated<-mediation_results_all%>%
-  filter(results %in% c("Prop. Mediated (average)") ) %>%
-  dplyr::select(Estimate,cat,results)
-
-mediation_results_propmediated<-rbind(mediation_results_propmediated,
-                                      data.frame(Estimate = 0, cat = 5, results = "Prop. Mediated (average)"))
-
-ggplot(data=mediation_results_propmediated,aes(x=cat,y=Estimate*100))+
-  geom_bar(stat='identity',fill="#27ae60")+
-  xlab('Baseline Sodium Category')+
-  ylab('%')+
-  geom_text(data=mediation_results_propmediated,aes(label = paste(round(Estimate*100,2),'%')), colour = "#2c3e50", vjust = 1.5)+
-  scale_y_continuous(breaks = c(0,50,100))+
-  # scale_fill_manual(labels = c("Proportion Mediated"))+
-  # labs(colour='Mortality Risk', fill='Proportion Mediated') +
-  theme(legend.position="bottom")+
-  theme_minimal()+
-  scale_x_continuous(breaks = c(1,2,3,4,5,6,7,8),labels = c("<120","120- <125","125- <130","130- <135","135- <140\n(Reference)","140- <145","145- <150",">150")) +
-  geom_point(data = total_effect,aes(x=cat,y=(or-1)*100),colour="#34495e")+
-  geom_line(data = total_effect,aes(x=cat,y=(or-1)*100),colour="#34495e")+
-  geom_ribbon(data=total_effect
-                ,aes(x=cat,ymin=(or.lb-1)*100,ymax=(or.ub-1)*100)
-                ,alpha=0.4
-                ,inherit.aes=FALSE
-                ,width=0.2
-                ,fill ='#2980b9')+
-  scale_y_continuous(
-  position ="right",
-    
-  # Features of the first axis
-  name = "Proportion of mortality mediated by GCS score",
-  
-  # Add a second axis and specify its features
-  sec.axis = sec_axis(~(./100)+1, name="Odds ratio (95%CI) of hospital mortality")
-  )+
-  labs(caption="Green Bars: Proportion of mortality mediated by GCS score\nBlue Dots: Odds Ratio of Hospital Mortality\nBlue Ribbon:Odds ratio (95%CI)")+
-  theme(plot.caption = element_text(hjust = 0, face= "italic"), #Default is hjust=1
-        plot.title.position = "plot", #NEW parameter. Apply for subtitle too.
-        plot.caption.position =  "plot") #NEW parameter
-
-
-```
-
-
-```{r fig.height=9, fig.width=7}
-mediation_results_total_effect<-mediation_results_all%>%filter(results %in% c("Total Effect" ) )
-
-mediation_results_total_effect[,c(1,2,3)]<-exp(mediation_results_total_effect[,c(1,2,3)])
-
-
-p1<-ggplot(data=mediation_results_total_effect,aes(x=cat,y=Estimate,colour=results,fill=results))+
-    geom_point()+
-    geom_line()+
-    geom_ribbon(   data=mediation_results_total_effect
-                  ,aes(x=cat,ymin=`95% CI Lower`,ymax=`95% CI Upper`,fill=results)
-                  ,alpha=0.3
-                  ,inherit.aes=F
-                  ,width=0.2)+
-    xlab('Baseline Sodium Category')+
-    ylab('Odds Ratio')+
-    scale_color_manual(labels = c("Total Effect"), values = c("#1abc9c"))+
-    scale_fill_manual(labels = c("Total Effect"), values = c("#1abc9c"))+
-    labs(colour='Metric', fill='Metric') +
-    theme_minimal()+
-  ggtitle('Total Effect')+
-  scale_x_continuous(breaks = c(1,2,3,4,6,7,8)) 
-
-mediation_results_propmediated<-mediation_results_all%>%filter(results %in% c("Prop. Mediated (average)") ) 
-
-p2<-ggplot(data=mediation_results_propmediated,aes(x=cat,y=Estimate*100,fill=results))+
-    geom_area()+
-    xlab('Baseline Sodium Category')+
-    ylab('%')+
-    scale_color_manual(labels = c("Proportion Mediated"), values = c("#f1c40f"))+
-    scale_fill_manual(labels = c("Proportion Mediated"), values = c("#f1c40f"))+
-    labs(colour='Metric', fill='Metric') +
-    theme_minimal()+
-  ggtitle('Proportion Mediated')+
-  scale_x_continuous(breaks = c(1,2,3,4,6,7,8)) 
-
-plot_grid(p2, p1, scale = c(1, 1),ncol = 1, align = "v")
-```
-# Sensitivity analysis plot grid
-
-Ref.: 
-plot(sens.out2, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 0.05))
-plot(sens.out8, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 0.05))
-
-```{r}
-plots <- list()
-
-# Use a loop to generate and store the plots
-for(i in 1:8){
-  if(i == 5) next # Skip plot number 5
-  
-  # Generate a plot
-  sens.out <- get(paste("sens.out", i, sep = "")) 
-  p <- plot(sens.out, sens.par = "rho", main = "Sensitivity Analysis", ylim = c(-0.05, 0.05))
-  
-  # Add a title to the plot
-  p <- p + ggtitle(paste("Category", i))
-  
-  # Store the plot in the list
-  plots[[i]] <- p
-}
-
-# Plot the plots in a 3x3 grid
-grid.arrange(grobs = plots, nrow = 3)
 ```
 

@@ -1,0 +1,322 @@
+---
+title: "03_tables_creation"
+# output: html_notebook
+---
+
+```{r setup, include=FALSE}
+#load the data
+```
+
+# Environment
+
+```{r}
+library(tableone)
+library(magrittr)
+library(dplyr)
+library(sqldf)
+library(summarytools)
+library(kableExtra)
+```
+
+## Table 1
+
+All variables.  Stratification (ie column groupings) should be by sodium categories.
+
+```{r,echo = F}
+dataframe_for_table1<-selected_df_imputed
+dataframe_for_table1$charlson_chf1<-as.factor(dataframe_for_table1$charlson_chf1)
+dataframe_for_table1$charlson_liver1<-as.factor(dataframe_for_table1$charlson_liver1)
+dataframe_for_table1$creatinine_great2<-as.factor(if_else(dataframe_for_table1$creatinine >2,1,0))
+
+
+# we are re-difining the 'Others' category
+dataframe_for_table1$unittype<-plyr::revalue(
+  dataframe_for_table1$unittype,c( 'Neuro ICU'='Others' , 'SICU'= 'Others', 'Cardiac ICU'='Others' , 'CCU-CTICU'='Others'  ,'CSICU'='Others' , 'CTICU'='Others')
+)
+
+vars_in_table1<-c("age", "gender", "AP_grp", "ethnicity", "apachescore", "mechvent_day01", "unittype", "charlson_chf1", "charlson_liver1", "creatinine", "creatinine_great2", "gcs_baseline", "normal_gcs", "hosp_mortality","sodium_cat")
+# lists the variables we are going to be including in table1 (excepts for the stratification variable)
+
+dataframe_for_table1<-dataframe_for_table1[,vars_in_table1]
+cat_variables<-rep(NA, length(vars_in_table1))
+# creates a dataset only with select variable using our original dataset and generated an empty list that is going to be used for storing categorical variables 
+
+stratifyby<-"sodium_cat"
+label(dataframe_for_table1$age)<-'Age'
+# selects variable to stratify by and label is useful for prettyfying variable names we want to appear on table 1
+
+# detects whether a variable is categorical or not based on the number of distinct variables per category (10 is the threshold)
+cont<-1
+for (i in 1:length(vars_in_table1) ) {
+  if ( n_distinct(dataframe_for_table1[vars_in_table1[i] ])<=10 ) {
+    print(i)
+    print(vars_in_table1[i])
+    print(names(dataframe_for_table1[vars_in_table1[i]]))
+    cat_variables[cont]<-names(dataframe_for_table1[vars_in_table1[i]])
+    cont<-cont+1
+  }
+}  
+cat_variables<-cat_variables[!is.na(cat_variables)]
+table1_base<-print(CreateTableOne(vars = vars_in_table1
+                                   ,strata = stratifyby
+                                  , factorVars = cat_variables
+    ,data = dataframe_for_table1, addOverall=T),varLabels = T ,nonnormal  = c('creatinine','gcs_baseline')
+)
+
+
+# run this in console for html output, the code below uses library kableExtra::
+# the line add_header_above() will need to be modified depending on the number of columns of the table
+starification_cats<-n_distinct(dataframe_for_table1[,stratifyby])
+table1_base %>%
+  kbl(caption = "Table 1 of base model" , align = "c") %>%
+  kable_classic_2(full_width = F, html_font = "Cambria")%>%
+  add_header_above(c(" "," ", 'Sodium Band Category' = starification_cats," ", "" ))
+
+```
+
+## Table 2
+
+
+
+```{r}
+# Create a list of the sodium bands
+sodium_bands <- c("<120", "120 - <125", "125 - <130 ", "130 - <135", 
+                  "135 - <140", "140- <145", "145- <150", "≥150")
+
+# Initialize an empty data frame to store the results
+results_df <- data.frame(Sodium_Band_mEq_per_L = character(),
+                         ADE_Est_95CI = character(),
+                         ACME_Est_95CI = character(),
+                         Total_Effect_Est_95CI = character(),
+                         Total_Effect_OR_95CI = character(),
+                         Prop_Est_95CI = character(),
+                         stringsAsFactors = FALSE)
+
+# Loop through each sodium band
+for (i in seq_along(sodium_bands)) {
+  
+  # If sodium band is empty, add a row with "Ref."
+  if (i == 5) {
+    row <- data.frame(Sodium_Band_mEq_per_L = sodium_bands[i],
+                      ADE_Est_95CI = "Ref.",
+                      ACME_Est_95CI = "Ref.",
+                      Total_Effect_Est_95CI = "Ref.",
+                      Total_Effect_OR_95CI = "Ref.",
+                      Prop_Est_95CI = "Ref.",
+                      stringsAsFactors = FALSE)
+  } else {
+    # Otherwise, get the mediation results for the corresponding category
+    mediation_results <- get(paste0("mediation_results_cat", i, "_sum"))
+    
+    # Extract the estimates and confidence intervals
+    ade_estimate <- sprintf("%.2f (%.2f - %.2f)", mediation_results[3, 1], mediation_results[3, 2], mediation_results[3, 3])
+    acme_estimate <- sprintf("%.2f (%.2f - %.2f)", mediation_results[2, 1], mediation_results[2, 2], mediation_results[2, 3])
+    total_effect_estimate <- sprintf("%.2f (%.2f - %.2f)", mediation_results[1, 1], mediation_results[1, 2], mediation_results[1, 3])
+    total_effect_OR <- sprintf("%.2f (%.2f - %.2f)", exp(mediation_results[1, 1]), exp(mediation_results[1, 2]), exp(mediation_results[1, 3]))
+    prop_estimate <- sprintf("%.2f (%.2f - %.2f)", mediation_results[4, 1], mediation_results[4, 2], mediation_results[4, 3])
+    
+    # Create a row with the results for the current sodium band
+    row <- data.frame(Sodium_Band_mEq_per_L = sodium_bands[i],
+                      ADE_Est_95CI = ade_estimate,
+                      ACME_Est_95CI = acme_estimate,
+                      Total_Effect_Est_95CI = total_effect_estimate,
+                      Total_Effect_OR_95CI = paste0(total_effect_OR, "*"),
+                      Prop_Est_95CI = prop_estimate,
+                      stringsAsFactors = FALSE)
+  }
+  
+  # Add the row to the results data frame
+  results_df <- rbind(results_df, row)
+}
+
+# we are not showing this table in the end, it's not intuitive.
+results_df%>%select(-Total_Effect_OR_95CI)
+
+# Print the final results data frame
+results_df%>%
+  kbl(caption = "Table 2" , align = "c")
+
+```
+
+## Supplemental Table 1
+
+```{r}
+dataframe_for_sup_table1<-selected_df_imputed
+
+
+vars_in_sup_table1 <- c("sodium_cat", "AP_grp", "ethnicity", "gender", "age", "MAP", "temperature", "heartrate", "respiratoryrate", "mechvent_day01", "day1fio2", "day1pao2", "pco2", "ph", "urine", "creatinine", "albumin", "bilirubin", "wbc", "cirrhosis", "aids", "leukemia", "immunosuppression", "charlson_chf1", "charlson_liver1")
+
+  
+  
+# lists the variables we are going to be including in sup_table1 (excepts for the stratification variable)
+
+dataframe_for_sup_table1<-dataframe_for_sup_table1[,vars_in_sup_table1]
+cat_variables<-rep(NA, length(vars_in_sup_table1))
+# creates a dataset only with select variable using our original dataset and generated an empty list that is going to be used for storing categorical variables 
+
+stratifyby<-"sodium_cat"
+label(dataframe_for_sup_table1$age)<-'Age'
+# selects variable to stratify by and label is useful for prettyfying variable names we want to appear on table 1
+
+# detects whether a variable is categorical or not based on the number of distinct variables per category (10 is the threshold)
+cont<-1
+for (i in 1:length(vars_in_sup_table1) ) {
+  if ( n_distinct(dataframe_for_sup_table1[vars_in_sup_table1[i] ])<=10 ) {
+    print(i)
+    print(vars_in_sup_table1[i])
+    print(names(dataframe_for_sup_table1[vars_in_sup_table1[i]]))
+    cat_variables[cont]<-names(dataframe_for_sup_table1[vars_in_sup_table1[i]])
+    cont<-cont+1
+  }
+}  
+cat_variables<-cat_variables[!is.na(cat_variables)]
+sup_table1_base<-print(CreateTableOne(vars = vars_in_sup_table1
+                                   ,strata = stratifyby
+                                  , factorVars = cat_variables
+    ,data = dataframe_for_sup_table1, addOverall=T),varLabels = T ,nonnormal  = c('temperature','heartrate','respiratoryrate','day1fio2','day1pao2','pco2', 'ph', 'urine', 'bun', 'albumin', 'bilirubin', 'wbc' )
+)
+
+
+# run this in console for html output, the code below uses library kableExtra::
+# the line add_header_above() will need to be modified depending on the number of columns of the table
+starification_cats<-n_distinct(dataframe_for_sup_table1[,stratifyby])
+sup_table1_base %>%
+  kbl(caption = "Table 1 of base model" , align = "c") %>%
+  kable_classic_2(full_width = F, html_font = "Cambria")%>%
+  add_header_above(c(" "," ", 'SOFA day1 Category' = starification_cats," ", "" ))
+```
+
+
+# Deprecated
+
+## Table Sen. Analysis
+
+```{r}
+# create a data frame to store the results
+results_df <- data.frame(Category = character(),
+                         Band = character(),
+                         Group = character(),
+                         Rho = numeric(),
+                         R2star_d_thresh = numeric(),
+                         R2tilde_d_thresh = numeric(),
+                         stringsAsFactors = FALSE)
+
+# loop through each sensitivity analysis object
+for (i in 1:8) {
+  
+  # skip category 5
+  if (i == 5) {
+    next
+  }
+  
+  # get the object corresponding to the current category
+  obj_name <- paste0("sens.out", i)
+  obj <- get(obj_name)
+  
+  # determine the band associated with the current category
+  if (i == 1) {
+    band <- "<120"
+  } else if (i == 2) {
+    band <- "120-<125"
+  } else if (i == 3) {
+    band <- "125-<130"
+  } else if (i == 4) {
+    band <- "130-<135"
+  } else if (i == 6) {
+    band <- "140-<145"
+  } else if (i == 7) {
+    band <- "145-<150"
+  } else if (i == 8) {
+    band <- ">150"
+  }
+  
+  # add the data for the control group to the results data frame
+  control_row <- data.frame(Category = i,
+                            Band = band,
+                            Group = "Control",
+                            Rho = obj$err.cr.d[1],
+                            R2star_d_thresh = obj$R2star.d.thresh[1],
+                            R2tilde_d_thresh = obj$R2tilde.d.thresh[1],
+                            stringsAsFactors = FALSE)
+  results_df <- rbind(results_df, control_row)
+  
+  # add the data for the treatment group to the results data frame
+  treatment_row <- data.frame(Category = i,
+                              Band = band,
+                              Group = "Treatment",
+                              Rho = obj$err.cr.d[2],
+                              R2star_d_thresh = obj$R2star.d.thresh[2],
+                              R2tilde_d_thresh = obj$R2tilde.d.thresh[2],
+                              stringsAsFactors = FALSE)
+  results_df <- rbind(results_df, treatment_row)
+}
+
+# print the results data frame
+results_df
+
+```
+
+## Supplemental Table 2
+
+Supplemental Table 2: Association between serum sodium level and Glasgow Coma Scale.
+
+```{r,echo = F}
+# we are re-difining the 'Others' category
+dataframe_for_table1%<>%mutate(
+gcs_noimpairment = as.factor(if_else( gcs_baseline==15, 1,0)),
+gcs_comatose = as.factor(if_else( between(gcs_baseline,3,8), 1,0))
+)
+
+stratifyby<-"sodium_cat"
+
+vars_in_table1<-c('gcs_baseline','gcs_noimpairment', 'gcs_comatose')
+cat_variables<-rep(NA, length(vars_in_table1))
+
+# detects whether a variable is categorical or not based on the number of distinct variables per category (10 is the threshold)
+cont<-1
+for (i in 1:length(vars_in_table1) ) {
+  if ( n_distinct(dataframe_for_table1[vars_in_table1[i] ])<=10 ) {
+    print(i)
+    print(vars_in_table1[i])
+    print(names(dataframe_for_table1[vars_in_table1[i]]))
+    cat_variables[cont]<-names(dataframe_for_table1[vars_in_table1[i]])
+    cont<-cont+1
+  }
+}  
+cat_variables<-cat_variables[!is.na(cat_variables)]
+table1_base<-print(CreateTableOne(vars = vars_in_table1
+                                   , strata = stratifyby
+                                  , factorVars = cat_variables
+    ,data = dataframe_for_table1, addOverall=T),varLabels = T)
+
+
+# run this in console for html output, the code below uses library kableExtra::
+# the line add_header_above() will need to be modified depending on the number of columns of the table
+starification_cats<-n_distinct(dataframe_for_table1[,stratifyby])
+table1_base %>%
+  kbl(caption = "Table 1 of base model" , align = "c") %>%
+  kable_classic_2(full_width = F, html_font = "Cambria")%>%
+  add_header_above(c(" "," ", 'Sodium Group' = starification_cats," ", "" ))
+```
+
+```{r}
+library(dplyr)
+
+results_overall %>%
+  mutate(Sodium_Band = ifelse(cat == 1, "<120mEq/L",
+                              ifelse(cat == 2, "120-<125mEq/L",
+                                     ifelse(cat == 3, "125-<139mEq/L",
+                                            ifelse(cat == 4, "130-<135mEq/L",
+                                                   ifelse(cat == 5, "135-<140mEq/L",
+                                                          ifelse(cat == 6, "140-<145mEq/L",
+                                                                 ifelse(cat == 7, "145-<150mEq/L",
+                                                                        ifelse(cat == 8, "≥150mEq/L",
+                                                                               "NA"))))))))) %>%
+  select(Sodium_Band, "ADE estimate (95% CI)" = results[results == "ADE (average)"] + 1,
+         "ACME estimate (95% CI)" = results[results == "ACME (average)"] + 1,
+         "Total Effect" = results[results == "Total Effect"],
+         "Proportion Estimate (95% CI)" = paste0(Estimate, " (", `95% CI Lower`, " - ", `95% CI Upper`, ")")) %>%
+  select(-results, -cat)
+
+```
+
