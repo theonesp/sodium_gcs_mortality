@@ -42,7 +42,21 @@ cat_variables<-rep(NA, length(vars_in_table1))
 # creates a dataset only with select variable using our original dataset and generated an empty list that is going to be used for storing categorical variables 
 
 stratifyby<-"sodium_cat"
-label(dataframe_for_table1$age)<-'Age'
+label(dataframe_for_table1$age) <- 'Age'
+label(dataframe_for_table1$gender) <- 'Gender'
+label(dataframe_for_table1$AP_grp) <- 'APACHE Diagnosis Group'
+label(dataframe_for_table1$ethnicity) <- 'Ethnicity'
+label(dataframe_for_table1$apachescore) <- 'APACHE Score'
+label(dataframe_for_table1$mechvent_day01) <- 'Mechanical Ventilation on Day 1'
+label(dataframe_for_table1$unittype) <- 'ICU Type'
+label(dataframe_for_table1$charlson_chf1) <- 'Charlson Comorbidity - Congestive Heart Failure'
+label(dataframe_for_table1$charlson_liver1) <- 'Charlson Comorbidity - Liver Disease'
+label(dataframe_for_table1$creatinine) <- 'Creatinine'
+label(dataframe_for_table1$creatinine_great2) <- 'Creatinine > 2'
+label(dataframe_for_table1$gcs_baseline) <- 'Baseline Glasgow Coma Scale'
+label(dataframe_for_table1$normal_gcs) <- 'Normal Glasgow Coma Scale'
+label(dataframe_for_table1$hosp_mortality) <- 'Hospital Mortality'
+label(dataframe_for_table1$sodium_cat) <- 'Sodium Category'
 # selects variable to stratify by and label is useful for prettyfying variable names we want to appear on table 1
 
 # detects whether a variable is categorical or not based on the number of distinct variables per category (10 is the threshold)
@@ -144,10 +158,8 @@ results_df%>%
 dataframe_for_sup_table1<-selected_df_imputed
 
 
-vars_in_sup_table1 <- c("sodium_cat", "AP_grp", "ethnicity", "gender", "age", "MAP", "temperature", "heartrate", "respiratoryrate", "mechvent_day01", "day1fio2", "day1pao2", "pco2", "ph", "urine", "creatinine", "albumin", "bilirubin", "wbc", "cirrhosis", "aids", "leukemia", "immunosuppression", "charlson_chf1", "charlson_liver1")
+vars_in_sup_table1 <- c("MAP", "temperature", "heartrate", "respiratoryrate", "day1fio2", "day1pao2", "pco2", "ph", "urine", "albumin", "bilirubin", "wbc", "cirrhosis", "aids", "leukemia", "immunosuppression","sodium_cat")
 
-  
-  
 # lists the variables we are going to be including in sup_table1 (excepts for the stratification variable)
 
 dataframe_for_sup_table1<-dataframe_for_sup_table1[,vars_in_sup_table1]
@@ -155,7 +167,24 @@ cat_variables<-rep(NA, length(vars_in_sup_table1))
 # creates a dataset only with select variable using our original dataset and generated an empty list that is going to be used for storing categorical variables 
 
 stratifyby<-"sodium_cat"
-label(dataframe_for_sup_table1$age)<-'Age'
+
+label(dataframe_for_sup_table1$MAP) <- 'Mean Arterial Pressure'
+label(dataframe_for_sup_table1$temperature) <- 'Temperature'
+label(dataframe_for_sup_table1$heartrate) <- 'Heart Rate'
+label(dataframe_for_sup_table1$respiratoryrate) <- 'Respiratory Rate'
+label(dataframe_for_sup_table1$day1fio2) <- 'FiO2 on Day 1'
+label(dataframe_for_sup_table1$day1pao2) <- 'PaO2 on Day 1'
+label(dataframe_for_sup_table1$pco2) <- 'PCO2'
+label(dataframe_for_sup_table1$ph) <- 'pH'
+label(dataframe_for_sup_table1$urine) <- 'Urine Output'
+label(dataframe_for_sup_table1$albumin) <- 'Albumin'
+label(dataframe_for_sup_table1$bilirubin) <- 'Bilirubin'
+label(dataframe_for_sup_table1$wbc) <- 'White Blood Cell Count'
+label(dataframe_for_sup_table1$cirrhosis) <- 'Cirrhosis'
+label(dataframe_for_sup_table1$aids) <- 'AIDS'
+label(dataframe_for_sup_table1$leukemia) <- 'Leukemia'
+label(dataframe_for_sup_table1$immunosuppression) <- 'Immunosuppression'
+
 # selects variable to stratify by and label is useful for prettyfying variable names we want to appear on table 1
 
 # detects whether a variable is categorical or not based on the number of distinct variables per category (10 is the threshold)
