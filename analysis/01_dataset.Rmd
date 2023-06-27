@@ -1,0 +1,945 @@
+<<<<<<< HEAD:analysis/01_dataset_creation.Rmd
+---
+title: "Sodium GCS Mediation Mortality"
+author: Miguel Ángel Armengol de la Hoz
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output:
+  # html_notebook:
+    code_folding: hide
+    number_sections: yes
+    theme: flatly
+    toc: yes
+    toc_float: yes
+
+knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = encoding, output_file = paste0(substr(inputFile,1,nchar(inputFile)-4)," ",Sys.Date(),'.html')) })
+---
+
+# Environment
+
+```{r message=FALSE, warning=FALSE}
+library(bigrquery)
+library(summarytools)
+library(readr)
+library(stringr)
+library(sqldf)
+library(dplyr)
+library(tableone)
+library(Hmisc)
+library(caret)
+library(plotly)
+library(table1)
+library(Amelia)
+library(ggpubr)
+library(magrittr)
+library(PRISMAstatement)
+options(scipen=999)
+
+# useful functions
+impute.median <- function(x) replace(x, is.na(x), median(x, na.rm = TRUE))
+'%!in%' <- function(x,y)!('%in%'(x,y))
+
+winsorize_x = function(x, cut = 0.005){
+  cut_point_top <- quantile(x, 1 - cut, na.rm = T)
+  cut_point_bottom <- quantile(x, cut, na.rm = T)
+  i = which(x >= cut_point_top) 
+  x[i] = cut_point_top
+  j = which(x <= cut_point_bottom) 
+  x[j] = cut_point_bottom
+  return(x)
+}
+
+```
+
+# Data Load
+
+## Set up BigQuery related functions
+
+This chunks also creates the run_query and get_sql function.
+
+```{r setup, include=FALSE}
+# Updated for our year
+project_id <- "hst-953-2018"
+options(httr_oauth_cache=FALSE)
+# Function that takes in a sql command and runs it on bigquery
+run_query <- function(query){
+  data <- query_exec(query, project=project_id, use_legacy_sql=FALSE,max_pages = Inf)
+  return(data)
+}
+
+# function for reading sql files
+getSQL <- function(filepath){
+  con = file(filepath, "r")
+  sql.string <- ""
+
+  while (TRUE){
+    line <- readLines(con, n = 1)
+
+    if ( length(line) == 0 ){
+      break
+    }
+
+    line <- gsub("\\t", " ", line)
+
+    if(grepl("--",line) == TRUE){
+      line <- paste(sub("--","/*",line),"*/")
+    }
+
+    sql.string <- paste(sql.string, line)
+  }
+
+  close(con)
+  return(sql.string)
+}
+```
+
+## SQL Extraction
+
+### Apache
+
+The _apacheapsvar_ table contains the variables used to calculate the Acute Physiology Score (APS) III for patients. APS-III is an established method of summarizing patient severity of illness on admission to the ICU.
+
+The score is part of the Acute Physiology Age Chronic Health Evaluation (APACHE) system of equations for predicting outcomes for ICU patients. See: http://eicu-crd.mit.edu/eicutables/apacheApsVar/
+
+The _apachepredvar_ table provides variables underlying the APACHE predictions. Acute Physiology Age Chronic Health Evaluation (APACHE) consists of a groups of equations used for predicting outcomes in critically ill patients. See: http://eicu-crd.mit.edu/eicutables/apachePredVar/
+
+We are extracting all variables needed to calculate apache except sodium.
+
+*WE ARE FINALLY NOT USING allapachevars*
+
+```{r}
+options(scipen = 20) # bigquery was producing an error that can be fixed with this command.
+#bq_auth() # CRITICAL!!! THIS NEEDS TO BE RUN FROM THE CONSOLE. IT WON'T WORK IF RUN FROM MARKDOWN.
+apacheapsvar <- run_query( getSQL("sql/apacheapsvar.sql" ))
+apachepredvar <- run_query( getSQL("sql/apachepredvar.sql" ))
+selected_columns<-names(apachepredvar[names(apachepredvar) %!in% names(apacheapsvar)])
+selected_columns<-c('patientunitstayid',selected_columns)
+
+allapachevars<-inner_join(apacheapsvar
+                         ,apachepredvar[,selected_columns]
+                        ,by='patientunitstayid')
+
+# we are removing the following variables since we already have them
+allapachevars$age<-NULL
+allapachevars$gender<-NULL
+
+
+
+# we are correcting the electivesurgery variable
+allapachevars<-allapachevars%>%mutate(
+  electivesurgery=as.integer(if_else(is.na(electivesurgery),'0',as.character(electivesurgery)))
+  
+)
+
+# imputing variables, normally -1 means missing so we are removing them in the appropriate fields and then performing median imputation
+minus_one_removal <- function(x) {
+  minus_one_remov <- ifelse(x==-1,as.logical(NA),x)
+  return(minus_one_remov)
+}
+
+median_imp <- function(x) {
+  median_impu <- if_else(is.na(x),median(x,na.rm = T),x)
+  return(median_impu)
+}
+
+allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")]<-apply(allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")],2, function(x) minus_one_removal(x) )
+
+allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")]<-apply(allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")],2, function(x) median_imp(x) )
+  
+
+apache_groups <- run_query( getSQL("sql/apache_groups.sql" ))
+
+apache_groups<-apache_groups%>%
+  mutate(
+    AP_grp=case_when(
+  # selecting only top 10 apache groups
+  AP_grp %in% c("Other","Sepsis","CardiacArrest","CVA","RespMedOther","ACS","GIBleed","CHF","Trauma","PNA") ~ AP_grp,
+  TRUE   ~ 'Other'
+  )
+)
+
+acute_physiology_score_components <- run_query( getSQL("sql/acute_physiology_score_components.sql" ))
+```
+
+### Other variables
+
+```{r}
+basic_demographics <- run_query( getSQL("sql/basic_demographics.sql" ))
+basic_demographics<-basic_demographics%>%mutate(
+  # we are simplifying the ethnicity category
+  ethnicity=if_else(ethnicity=='Caucasian','Caucasian','Not Caucasian')
+)
+
+gcs_baseline <- run_query( getSQL("sql/gcs_baseline.sql" ))
+admission_sodium <- run_query( getSQL("sql/admission_sodium.sql" ))
+charlson_score <- run_query( getSQL("sql/charlson_score.sql" ))
+ventilated_binary_first_day <- run_query( getSQL("sql/ventilated_binary_first_day.sql" ))
+```
+
+# Left Join
+
+```{r}
+initial_dataset<-Reduce(function(...) merge(..., all.x=TRUE, by = "patientunitstayid"), list(
+   basic_demographics
+  ,gcs_baseline
+  ,admission_sodium
+  ,charlson_score
+  ,ventilated_binary_first_day
+  ,apache_groups
+  ,acute_physiology_score_components
+  ,allapachevars
+))
+```
+
+
+# Addresing variables distribution
+
+## Selecting variables
+
+Basic demographics included age, gender, and ethnicity.  
+Ethnicity was self-reported as white, African American, Hispanic, Asian, Native American, Other, or Unknown.  *TODO correct in manuscript only two races*
+
+Admission diagnoses were adjudicated by trained clinicians within the first 24 hours of ICU admission as part of the Apache scoring system(20), and were categorized into the ten most common clinical categories, including sepsis, myocardial infarction/angina, trauma, gastrointestinal bleed, arrhythmia, drug/alcohol complications, cerebrovascular accident, coronary artery bypass grafting, pneumonia, malignancy related, congestive heart failure, unknown and other. *TODO correct in manuscript new top 10 cats*
+
+A history of metastatic disease, AIDS, liver disease, stroke, renal disease, diabetes, cancer, leukemia, lymphoma, myocardial infraction, congestive heart failure, peripheral vascular disease, transient ischemic attack, dementia, chronic obstructive pulmonary diseae, connective tissue diease, and peptic ulcer disease, as adjudicated in the Charlson comorbidity scoring system were used to describe preexisting illness burden, and included as separate variables(21).  
+
+The source of admission (emergency department, floor, other hospital, direct admission, recovery unit/operating room and other), 
+
+Unit type (medical, medical surgical, surgical, cardiac, cardiothoracic, and neurological) were included as categorical variables.  
+
+Mechanical ventilation during the first 24 hours of care was included as binary variable.
+
+```{r}
+selected_df<-initial_dataset%>%dplyr::select(
+# initial demographics  
+patientunitstayid,
+age,
+gender, 
+ethnicity, 
+hospitaladmitsource,
+unittype, 
+AP_grp,
+# comorb
+charlson_chf1,
+charlson_liver1,
+
+#others
+mechvent_day01,
+#main
+sodium1,
+gcs_baseline,
+hosp_mortality,
+
+#apachevars
+intubated,
+vent,
+dialysis,
+eyes,
+motor,
+verbal,
+meds,
+urine,
+wbc,
+temperature,
+heartrate,
+meanbp,
+ph,
+hematocrit,
+creatinine,
+albumin,
+pao2,
+pco2,
+bun,
+glucose,
+bilirubin,
+fio2,
+sicuday,
+saps3day1,
+saps3today,
+saps3yesterday,
+teachtype,
+region,
+bedcount,
+admitsource,
+graftcount,
+admitdiagnosis,
+thrombolytics,
+diedinhospital,
+aids,
+hepaticfailure,
+lymphoma,
+metastaticcancer,
+leukemia,
+immunosuppression,
+cirrhosis,
+electivesurgery,
+activetx,
+readmit,
+ima,
+midur,
+ventday1,
+oobventday1,
+oobintubday1,
+diabetes,
+managementsystem,
+var03hspxlos,
+ejectfx,
+dischargelocation,
+visitnumber,
+amilocation,
+day1meds,
+day1verbal,
+day1motor,
+day1eyes,
+day1pao2,
+day1fio2,
+respiratoryrate,
+MAP
+
+)
+
+# factorizing variables
+selected_df$gender<-as.factor(selected_df$gender)
+selected_df$ethnicity<-as.factor(selected_df$ethnicity) 
+selected_df$AP_grp<-as.factor(selected_df$AP_grp)
+selected_df$unittype<-as.factor(selected_df$unittype)
+selected_df$hospitaladmitsource<-as.factor(selected_df$hospitaladmitsource)
+selected_df$mechvent_day01<-as.factor(selected_df$mechvent_day01)
+selected_df$hosp_mortality<-as.factor(selected_df$hosp_mortality)
+```
+
+# Exclusion criteria
+
+We are not excluding patients with a baseline sodium outside of our groups.
+
+```{r}
+# cat('Initial number of patients:',nrow(selected_df))
+# 
+# selected_df<- selected_df[complete.cases(selected_df),]
+# cat('Final number of patients:',nrow(selected_df))
+
+print('Initial number of patients:')
+a<-nrow(selected_df)
+a
+
+print('Patients with incomplete data that are excluded')
+selected_df<-selected_df[complete.cases(selected_df),]
+b<-nrow(selected_df)
+a-b
+
+print('Final number of patients:')
+c<-nrow(selected_df)
+c
+
+flow_exclusions(
+  incl_counts = c(a, c),
+  total_label = "Initial Cohort",
+  incl_labels = c( "Final Number of patients"),
+  excl_labels = c("Patients with incomplete data that are excluded"),
+  percent_of_total = TRUE
+)
+```
+
+# Addressing basseline sodium outliers
+
+```{r}
+# Winsorizing outliers
+selected_df$sodium1<-winsorize_x(selected_df$sodium1)
+
+```
+
+# New variables creation
+
+## Normal GCS
+
+```{r}
+selected_df$normal_gcs<-as.factor(if_else(selected_df$gcs_baseline==15,1,0))
+```
+
+
+## Baseline Sodium categories
+
+Categories per John criteria.
+
+<120	120 - <125	125 - <130	130 - <135	135 - <140	140 - <145	145 - <150	≥150
+
+```{r}
+selected_df<-selected_df%>%mutate(
+  sodium_cat = case_when(
+    sodium1 <=120 ~ '1',
+    between(sodium1,120,125) ~ '2',
+    between(sodium1,125,130) ~ '3',
+    between(sodium1,130,135) ~ '4',
+    between(sodium1,135,140) ~ '5', # This is the reference dataset
+    between(sodium1,140,145) ~ '6', # still normal
+    between(sodium1,145,150) ~ '7',
+    sodium1>= 150 ~ '8',
+    
+  )
+)
+
+selected_df$sodium_cat<-as.factor(selected_df$sodium_cat)
+```
+
+## Age Categories
+
+```{r}
+selected_df%<>%mutate(
+  age_cat = case_when(
+    between(age,18,30) ~ '18 - <30',
+    between(age,30,50) ~ '30 - <50',
+    between(age,50,65) ~ '50 - <65',
+    sodium1>= 65 ~ '>=65',
+    
+  )
+)
+```
+
+# Setting proper datatype
+
+```{r}
+selected_df%<>%mutate_at(c('cirrhosis','aids','leukemia','immunosuppression','charlson_chf1','charlson_liver1'), as.factor)
+```
+
+
+# Separate Sodium bands datasets
+
+## Creating the subsets
+
+```{r}
+sodium_split <- split( selected_df,  selected_df$sodium_cat)
+```
+
+## Storing every subset in a different dataset
+
+```{r}
+for (i in c(1:n_distinct(selected_df$sodium_cat))){ 
+assign( paste('sodium_cat_',i,'_df',sep=''), sodium_split[[i]])
+  }
+```
+
+## Creating the datasets for the analysis
+
+<!-- I created 1 dataset per category that includes the category level and the reference level. I did this 7 times since category 5 is the reference and does not need a separate analysis. -->
+
+<!-- I coded being on the reference as 0 and being on a different sodium category as 1. -->
+
+<!-- ```{r} -->
+<!-- sodium_cat_1_df<-rbind(sodium_cat_1_df,sodium_cat_5_df) -->
+<!-- sodium_cat_2_df<-rbind(sodium_cat_2_df,sodium_cat_5_df) -->
+<!-- sodium_cat_3_df<-rbind(sodium_cat_3_df,sodium_cat_5_df) -->
+<!-- sodium_cat_4_df<-rbind(sodium_cat_4_df,sodium_cat_5_df) -->
+<!-- sodium_cat_6_df<-rbind(sodium_cat_6_df,sodium_cat_5_df) -->
+<!-- sodium_cat_7_df<-rbind(sodium_cat_7_df,sodium_cat_5_df) -->
+<!-- sodium_cat_8_df<-rbind(sodium_cat_8_df,sodium_cat_5_df) -->
+
+<!-- sodium_cat_1_df<-sodium_cat_1_df%>%mutate( -->
+<!--   sodium_cat=if_else(sodium_cat==5,'0Ref','cat_1') -->
+<!-- ) -->
+
+<!-- sodium_cat_2_df<-sodium_cat_2_df%>%mutate( -->
+<!--   sodium_cat=if_else(sodium_cat==5,'0Ref','cat_2') -->
+<!-- ) -->
+
+<!-- sodium_cat_3_df<-sodium_cat_3_df%>%mutate( -->
+<!--   sodium_cat=if_else(sodium_cat==5,'0Ref','cat_3') -->
+<!-- ) -->
+
+<!-- sodium_cat_4_df<-sodium_cat_4_df%>%mutate( -->
+<!--   sodium_cat=if_else(sodium_cat==5,'0Ref','cat_4') -->
+<!-- ) -->
+
+<!-- sodium_cat_6_df<-sodium_cat_6_df%>%mutate( -->
+<!--   sodium_cat=if_else(sodium_cat==5,'0Ref','cat_6') -->
+<!-- ) -->
+
+<!-- sodium_cat_7_df<-sodium_cat_7_df%>%mutate( -->
+<!--   sodium_cat=if_else(sodium_cat==5,'0Ref','cat_7') -->
+<!-- ) -->
+
+<!-- sodium_cat_8_df<-sodium_cat_8_df%>%mutate( -->
+<!--   sodium_cat=if_else(sodium_cat==5,'0Ref','cat_8') -->
+<!-- ) -->
+
+<!-- ``` -->
+
+<!-- # Creating sodium categories datasets -->
+
+```{r}
+selected_df$sodium_cat<-as.numeric(as.character(selected_df$sodium_cat))
+sodium_cat_1_df<-selected_df%>%filter(sodium_cat%in%c(1,5))
+sodium_cat_2_df<-selected_df%>%filter(sodium_cat%in%c(2,5))
+sodium_cat_3_df<-selected_df%>%filter(sodium_cat%in%c(3,5))
+sodium_cat_4_df<-selected_df%>%filter(sodium_cat%in%c(4,5))
+sodium_cat_6_df<-selected_df%>%filter(sodium_cat%in%c(6,5))
+sodium_cat_7_df<-selected_df%>%filter(sodium_cat%in%c(7,5))
+sodium_cat_8_df<-selected_df%>%filter(sodium_cat%in%c(8,5))
+```
+
+<!-- # Dataset Export -->
+
+<!-- ```{r} -->
+<!-- saveRDS(selected_df,file=paste('sodium_gcs_mediation_',Sys.Date(),'.Rds')) -->
+<!-- ``` -->
+
+=======
+---
+title: "Sodium GCS Mediation Mortality"
+author: Miguel Ángel Armengol de la Hoz
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output:
+  # html_notebook:
+    code_folding: hide
+    number_sections: yes
+    theme: flatly
+    toc: yes
+    toc_float: yes
+
+knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = encoding, output_file = paste0(substr(inputFile,1,nchar(inputFile)-4)," ",Sys.Date(),'.html')) })
+---
+
+# Environment
+
+```{r message=FALSE, warning=FALSE}
+library(bigrquery)
+library(summarytools)
+library(readr)
+library(stringr)
+library(sqldf)
+library(dplyr)
+library(tableone)
+library(Hmisc)
+library(caret)
+library(plotly)
+library(table1)
+library(Amelia)
+library(ggpubr)
+library(magrittr)
+library(PRISMAstatement)
+options(scipen=999)
+
+# useful functions
+impute.median <- function(x) replace(x, is.na(x), median(x, na.rm = TRUE))
+'%!in%' <- function(x,y)!('%in%'(x,y))
+
+winsorize_x = function(x, cut = 0.005){
+  cut_point_top <- quantile(x, 1 - cut, na.rm = T)
+  cut_point_bottom <- quantile(x, cut, na.rm = T)
+  i = which(x >= cut_point_top) 
+  x[i] = cut_point_top
+  j = which(x <= cut_point_bottom) 
+  x[j] = cut_point_bottom
+  return(x)
+}
+
+
+# imputing variables, normally -1 means missing so we are removing them in the appropriate fields and then performing median imputation
+minus_one_removal <- function(x) {
+  minus_one_remov <- ifelse(x==-1,as.logical(NA),x)
+  return(minus_one_remov)
+}
+
+na_replace_zero <- function(x) {
+  replace_zero <- ifelse(is.na((x)),0,x)
+  return(replace_zero)
+}
+
+median_imp <- function(x) {
+  median_impu <- if_else(is.na(x),median(x,na.rm = T),x)
+  return(median_impu)
+}
+
+```
+
+# Data Load
+
+## Set up BigQuery related functions
+
+This chunks also creates the run_query and get_sql function.
+
+```{r setup, include=FALSE}
+# Updated for our year
+#project_id <- "mvte-318912"
+project_id <- "hst-953-2018"
+options(httr_oauth_cache=FALSE)
+# Function that takes in a sql command and runs it on bigquery
+run_query <- function(query){
+  #run query
+  data <- bq_project_query(project_id, query = query)
+  ## download results
+  data <- bq_table_download(data)
+  #data <- query_exec(query, project=project_id, use_legacy_sql=FALSE,max_pages = Inf)
+  return(data)
+}
+
+# function for reading sql files
+getSQL <- function(filepath){
+  con = file(filepath, "r")
+  sql.string <- ""
+
+  while (TRUE){
+    line <- readLines(con, n = 1)
+
+    if ( length(line) == 0 ){
+      break
+    }
+
+    line <- gsub("\\t", " ", line)
+
+    if(grepl("--",line) == TRUE){
+      line <- paste(sub("--","/*",line),"*/")
+    }
+
+    sql.string <- paste(sql.string, line)
+  }
+
+  close(con)
+  return(sql.string)
+}
+```
+
+## SQL Extraction
+
+### Apache
+
+The _apacheapsvar_ table contains the variables used to calculate the Acute Physiology Score (APS) III for patients. APS-III is an established method of summarizing patient severity of illness on admission to the ICU.
+
+The score is part of the Acute Physiology Age Chronic Health Evaluation (APACHE) system of equations for predicting outcomes for ICU patients. See: http://eicu-crd.mit.edu/eicutables/apacheApsVar/
+
+The _apachepredvar_ table provides variables underlying the APACHE predictions. Acute Physiology Age Chronic Health Evaluation (APACHE) consists of a groups of equations used for predicting outcomes in critically ill patients. See: http://eicu-crd.mit.edu/eicutables/apachePredVar/
+
+We are extracting all variables needed to calculate apache except sodium.
+
+*WE ARE FINALLY NOT USING allapachevars*
+
+```{r}
+options(scipen = 20) # bigquery was producing an error that can be fixed with this command.
+#bq_auth() # CRITICAL!!! THIS NEEDS TO BE RUN FROM THE CONSOLE. IT WON'T WORK IF RUN FROM MARKDOWN.
+apacheapsvar <- run_query( getSQL("sql/apacheapsvar.sql" ))
+apachepredvar <- run_query( getSQL("sql/apachepredvar.sql" ))
+selected_columns<-names(apachepredvar[names(apachepredvar) %!in% names(apacheapsvar)])
+selected_columns<-c('patientunitstayid',selected_columns)
+
+allapachevars<-inner_join(apacheapsvar
+                         ,apachepredvar[,selected_columns]
+                        ,by='patientunitstayid')
+
+# we are removing the following variables since we already have them
+allapachevars$age<-NULL
+allapachevars$gender<-NULL
+
+
+
+# we are correcting the electivesurgery variable
+allapachevars<-allapachevars%>%mutate(
+  electivesurgery=as.integer(if_else(is.na(electivesurgery),'0',as.character(electivesurgery)))
+  
+)
+
+
+allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")]<-apply(allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")],2, function(x) minus_one_removal(x) )
+
+#allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")]<-apply(allapachevars[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2")],2, function(x) median_imp(x) )
+  
+
+apache_groups <- run_query( getSQL("sql/apache_groups.sql" ))
+
+apache_groups<-apache_groups%>%
+  mutate(
+    AP_grp=case_when(
+  # selecting only top 10 apache groups
+  AP_grp %in% c("Other","Sepsis","CardiacArrest","CVA","RespMedOther","ACS","GIBleed","CHF","Trauma","PNA") ~ AP_grp,
+  TRUE   ~ 'Other'
+  )
+)
+
+acute_physiology_score_components <- run_query( getSQL("sql/acute_physiology_score_components.sql" ))
+
+apachepatientresult <- run_query(getSQL("sql/apachepatientresult.sql" ))
+```
+
+### Other variables
+
+```{r}
+basic_demographics <- run_query( getSQL("sql/basic_demographics.sql" ))
+basic_demographics<-basic_demographics%>%mutate(
+  # we are simplifying the ethnicity category
+  ethnicity=if_else(ethnicity=='Caucasian','Caucasian','Not Caucasian')
+)
+
+gcs_baseline <- run_query( getSQL("sql/gcs_baseline.sql" ))
+admission_sodium <- run_query( getSQL("sql/admission_sodium.sql" ))
+charlson_score <- run_query( getSQL("sql/charlson_score.sql" ))
+ventilated_binary_first_day <- run_query( getSQL("sql/ventilated_binary_first_day.sql" ))
+```
+
+# Left Join
+
+```{r}
+initial_dataset<-Reduce(function(...) merge(..., all.x=TRUE, by = "patientunitstayid"), list(
+   basic_demographics
+  ,gcs_baseline
+  ,admission_sodium
+  ,charlson_score
+  ,ventilated_binary_first_day
+  ,apache_groups
+  ,acute_physiology_score_components
+  ,allapachevars
+  ,apachepatientresult
+))
+```
+
+
+# Addresing variables distribution
+
+## Selecting variables
+
+Basic demographics included age, gender, and ethnicity.  
+Ethnicity was self-reported as white, African American, Hispanic, Asian, Native American, Other, or Unknown.  *TODO correct in manuscript only two races*
+
+Admission diagnoses were adjudicated by trained clinicians within the first 24 hours of ICU admission as part of the Apache scoring system(20), and were categorized into the ten most common clinical categories, including sepsis, myocardial infarction/angina, trauma, gastrointestinal bleed, arrhythmia, drug/alcohol complications, cerebrovascular accident, coronary artery bypass grafting, pneumonia, malignancy related, congestive heart failure, unknown and other. *TODO correct in manuscript new top 10 cats*
+
+A history of metastatic disease, AIDS, liver disease, stroke, renal disease, diabetes, cancer, leukemia, lymphoma, myocardial infraction, congestive heart failure, peripheral vascular disease, transient ischemic attack, dementia, chronic obstructive pulmonary diseae, connective tissue diease, and peptic ulcer disease, as adjudicated in the Charlson comorbidity scoring system were used to describe preexisting illness burden, and included as separate variables(21).  
+
+The source of admission (emergency department, floor, other hospital, direct admission, recovery unit/operating room and other), 
+
+Unit type (medical, medical surgical, surgical, cardiac, cardiothoracic, and neurological) were included as categorical variables.  
+
+Mechanical ventilation during the first 24 hours of care was included as binary variable.
+
+```{r}
+selected_df<-initial_dataset%>%dplyr::select(
+# initial demographics  
+patientunitstayid,
+age,
+gender, 
+ethnicity, 
+hospitaladmitsource,
+unittype, 
+# apache related
+AP_grp,
+apachescore,
+# comorb
+charlson_chf1,
+charlson_liver1,
+
+#others
+mechvent_day01,
+#main
+sodium1,
+gcs_baseline,
+hosp_mortality,
+
+#apachevars
+intubated,
+vent,
+dialysis,
+eyes,
+motor,
+verbal,
+meds,
+urine,
+wbc,
+temperature,
+heartrate,
+meanbp,
+ph,
+hematocrit,
+creatinine,
+albumin,
+pao2,
+pco2,
+bun,
+glucose,
+bilirubin,
+fio2,
+sicuday,
+saps3day1,
+saps3today,
+saps3yesterday,
+teachtype,
+region,
+bedcount,
+admitsource,
+graftcount,
+admitdiagnosis,
+thrombolytics,
+diedinhospital,
+aids,
+hepaticfailure,
+lymphoma,
+metastaticcancer,
+leukemia,
+immunosuppression,
+cirrhosis,
+electivesurgery,
+activetx,
+readmit,
+ima,
+midur,
+ventday1,
+oobventday1,
+oobintubday1,
+diabetes,
+managementsystem,
+var03hspxlos,
+ejectfx,
+dischargelocation,
+visitnumber,
+amilocation,
+day1meds,
+day1verbal,
+day1motor,
+day1eyes,
+day1pao2,
+day1fio2,
+respiratoryrate,
+MAP
+
+)
+
+# factorizing variables
+selected_df$gender<-as.factor(selected_df$gender)
+selected_df$ethnicity<-as.factor(selected_df$ethnicity) 
+selected_df$AP_grp<-as.factor(selected_df$AP_grp)
+selected_df$unittype<-as.factor(selected_df$unittype)
+selected_df$hospitaladmitsource<-as.factor(selected_df$hospitaladmitsource)
+selected_df$mechvent_day01<-as.factor(selected_df$mechvent_day01)
+selected_df$hosp_mortality<-as.factor(selected_df$hosp_mortality)
+```
+
+# Exclusion criteria
+
+We are not excluding patients with a baseline sodium outside of our groups.
+
+```{r}
+# cat('Initial number of patients:',nrow(selected_df))
+# 
+# selected_df<- selected_df[complete.cases(selected_df),]
+# cat('Final number of patients:',nrow(selected_df))
+print('Initial number of patients:')
+a<-nrow(selected_df)
+a
+
+#exclude missing GCS sodium at baseline. Update here since labs and measurements weren't imputated before.
+print('Patients with incomplete data that are excluded')
+#selected_df<-selected_df[complete.cases(selected_df),]
+selected_df<-selected_df%>%filter(!is.na(gcs_baseline)&!is.na(sodium1)&!is.na(hosp_mortality))
+b<-nrow(selected_df)
+a-b
+
+print('Final number of patients:')
+c<-nrow(selected_df)
+c
+
+flow_exclusions(
+  incl_counts = c(a, c),
+  total_label = "Initial Cohort",
+  incl_labels = c( "Final Number of patients"),
+  excl_labels = c("Patients with missing sodium, gcs and hospital discharge stauts are excluded"),
+  percent_of_total = TRUE
+)
+```
+
+# Addressing basseline sodium outliers
+
+```{r}
+# Winsorizing outliers
+selected_df$sodium1<-winsorize_x(selected_df$sodium1)
+```
+
+# New variables creation
+
+## Normal GCS
+
+```{r}
+selected_df$normal_gcs<-as.factor(if_else(selected_df$gcs_baseline==15,1,0))
+```
+
+
+## Baseline Sodium categories
+
+Categories per John criteria.
+
+<120	120 - <125	125 - <130	130 - <135	135 - <140	140 - <145	145 - <150	≥150
+
+```{r}
+selected_df<-selected_df%>%mutate(
+  sodium_cat = case_when(
+    sodium1 <=120 ~ '1',
+    between(sodium1,120,125) ~ '2',
+    between(sodium1,125,130) ~ '3',
+    between(sodium1,130,135) ~ '4',
+    between(sodium1,135,140) ~ '5', # This is the reference dataset
+    between(sodium1,140,145) ~ '6', # still normal
+    between(sodium1,145,150) ~ '7',
+    sodium1>= 150 ~ '8',
+    
+  )
+)
+
+selected_df$sodium_cat<-as.factor(selected_df$sodium_cat)
+```
+
+## Age Categories
+
+```{r}
+selected_df%<>%mutate(
+  age_cat = case_when(
+    between(age,18,30) ~ '18 - <30',
+    between(age,30,50) ~ '30 - <50',
+    between(age,50,65) ~ '50 - <65',
+    sodium1>= 65 ~ '>=65',
+    
+  )
+)
+```
+
+# Setting proper datatype
+
+```{r}
+selected_df%<>%mutate_at(c('cirrhosis','aids','leukemia','immunosuppression','charlson_chf1','charlson_liver1'), as.factor)
+```
+
+
+# Separate Sodium bands datasets
+
+## Creating the subsets
+
+```{r}
+sodium_split <- split( selected_df,  selected_df$sodium_cat)
+```
+
+## Storing every subset in a different dataset
+
+```{r}
+for (i in c(1:n_distinct(selected_df$sodium_cat))){ 
+assign( paste('sodium_cat_',i,'_df',sep=''), sodium_split[[i]])
+  }
+```
+
+# Imputing missing values
+
+```{r}
+selected_df_imputed<-selected_df
+selected_df_imputed[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2","MAP","respiratoryrate")]<-apply(selected_df_imputed[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2","MAP","respiratoryrate")],2, function(x) median_imp(x) )
+
+selected_df_imputed[,c('cirrhosis','aids','leukemia','immunosuppression','charlson_chf1','charlson_liver1')]<-apply(selected_df_imputed[,c('cirrhosis','aids','leukemia','immunosuppression','charlson_chf1','charlson_liver1')],2, function(x) na_replace_zero(x) )
+
+
+selected_df_imputed$sodium_cat<-as.numeric(as.character(selected_df_imputed$sodium_cat))
+sodium_cat_1_df<-selected_df_imputed%>%filter(sodium_cat%in%c(1,5))
+sodium_cat_2_df<-selected_df_imputed%>%filter(sodium_cat%in%c(2,5))
+sodium_cat_3_df<-selected_df_imputed%>%filter(sodium_cat%in%c(3,5))
+sodium_cat_4_df<-selected_df_imputed%>%filter(sodium_cat%in%c(4,5))
+sodium_cat_6_df<-selected_df_imputed%>%filter(sodium_cat%in%c(6,5))
+sodium_cat_7_df<-selected_df_imputed%>%filter(sodium_cat%in%c(7,5))
+sodium_cat_8_df<-selected_df_imputed%>%filter(sodium_cat%in%c(8,5))
+```
+
+<!-- # Dataset Export -->
+
+<!-- ```{r} -->
+<!-- saveRDS(selected_df,file=paste('sodium_gcs_mediation_',Sys.Date(),'.Rds')) -->
+<!-- ``` -->
+
+>>>>>>> update_data_and_analysis:analysis/01_dataset.Rmd
