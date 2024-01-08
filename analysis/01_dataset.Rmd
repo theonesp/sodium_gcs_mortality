@@ -1,4 +1,4 @@
-<<<<<<< HEAD:analysis/01_dataset_creation.Rmd
+
 ---
 title: "Sodium GCS Mediation Mortality"
 author: Miguel Ángel Armengol de la Hoz
@@ -58,7 +58,8 @@ This chunks also creates the run_query and get_sql function.
 
 ```{r setup, include=FALSE}
 # Updated for our year
-project_id <- "hst-953-2018"
+#project_id <- "hst-953-2018"
+project_id <- "resuscitation-chf-esrd"
 options(httr_oauth_cache=FALSE)
 # Function that takes in a sql command and runs it on bigquery
 run_query <- function(query){
@@ -173,6 +174,22 @@ gcs_baseline <- run_query( getSQL("sql/gcs_baseline.sql" ))
 admission_sodium <- run_query( getSQL("sql/admission_sodium.sql" ))
 charlson_score <- run_query( getSQL("sql/charlson_score.sql" ))
 ventilated_binary_first_day <- run_query( getSQL("sql/ventilated_binary_first_day.sql" ))
+
+adm_dx <- run_query( getSQL("sql/adm_dx.sql" ))
+RASS <- run_query( getSQL("sql/rass.sql" ))
+adm_source <- run_query( getSQL("sql/adm_source.sql" ))
+```
+
+
+```{r}
+#### RASS
+
+rass_prep <- RASS%>%group_by(patientunitstayid)%>%
+  arrange(desc(nursingchartoffset))%>%
+  filter(row_number()==1)
+rass_prep$rass_score <- ifelse(rass_prep$nursingchartvalue < 0,",<0","other")
+rass_prep = rass_prep%>%select(patientunitstayid,rass_score)
+
 ```
 
 # Left Join
@@ -187,6 +204,7 @@ initial_dataset<-Reduce(function(...) merge(..., all.x=TRUE, by = "patientunitst
   ,apache_groups
   ,acute_physiology_score_components
   ,allapachevars
+  ,rass_prep
 ))
 ```
 
@@ -293,16 +311,19 @@ day1eyes,
 day1pao2,
 day1fio2,
 respiratoryrate,
-MAP
-
+MAP,
+rass_score
 )
+
+selected_df$adm_source = ifelse(selected_df$hospitaladmitsource%in%c("Emergency Department"), "ED",ifelse(adm_source$hospitaladmitsource%in%c("Other Hospital"),"Other Hospital","Floor/Other"))
+selected_df$rass_score[is.na(selected_df$rass_score)] = "other" ## Problem is only 6k out of 200k has RASS
 
 # factorizing variables
 selected_df$gender<-as.factor(selected_df$gender)
 selected_df$ethnicity<-as.factor(selected_df$ethnicity) 
 selected_df$AP_grp<-as.factor(selected_df$AP_grp)
 selected_df$unittype<-as.factor(selected_df$unittype)
-selected_df$hospitaladmitsource<-as.factor(selected_df$hospitaladmitsource)
+selected_df$adm_source<-as.factor(selected_df$adm_source)
 selected_df$mechvent_day01<-as.factor(selected_df$mechvent_day01)
 selected_df$hosp_mortality<-as.factor(selected_df$hosp_mortality)
 ```
@@ -321,8 +342,9 @@ print('Initial number of patients:')
 a<-nrow(selected_df)
 a
 
-print('Patients with incomplete data that are excluded')
+print('Patients with incomplete data and elective surgery that are excluded')
 selected_df<-selected_df[complete.cases(selected_df),]
+selected_df<-selected_df%>%filter(electivesurgery == 0)
 b<-nrow(selected_df)
 a-b
 
@@ -334,7 +356,7 @@ flow_exclusions(
   incl_counts = c(a, c),
   total_label = "Initial Cohort",
   incl_labels = c( "Final Number of patients"),
-  excl_labels = c("Patients with incomplete data that are excluded"),
+  excl_labels = c("Patients with incomplete data and elective surgery that are excluded"),
   percent_of_total = TRUE
 )
 ```
