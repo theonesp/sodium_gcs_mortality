@@ -200,19 +200,71 @@ for (i in 1:length(vars_in_sup_table1) ) {
 }  
 cat_variables<-cat_variables[!is.na(cat_variables)]
 sup_table1_base<-print(CreateTableOne(vars = vars_in_sup_table1
-                                   ,strata = stratifyby
-                                  , factorVars = cat_variables
-    ,data = dataframe_for_sup_table1, addOverall=T),varLabels = T ,nonnormal  = c('temperature','heartrate','respiratoryrate','day1fio2','day1pao2','pco2', 'ph', 'urine', 'bun', 'albumin', 'bilirubin', 'wbc' )
-)
+                                   , strata = stratifyby
+                                   , factorVars = cat_variables
+                                   , data = dataframe_for_sup_table1
+                                   , addOverall = T)
+                                   , varLabels = T 
+                       # ,nonnormal  = c('temperature','heartrate','day1fio2','day1pao2','pco2', 'ph', 'urine', 'bun', 'albumin', 'bilirubin', 'wbc' )
+                                   # , smd = TRUE
+    )
 
 
 # run this in console for html output, the code below uses library kableExtra::
 # the line add_header_above() will need to be modified depending on the number of columns of the table
 starification_cats<-n_distinct(dataframe_for_sup_table1[,stratifyby])
 sup_table1_base %>%
-  kbl(caption = "Table 1 of base model" , align = "c") %>%
+  kbl(caption = "Sup Table 1" , align = "c") %>%
   kable_classic_2(full_width = F, html_font = "Cambria")%>%
-  add_header_above(c(" "," ", 'SOFA day1 Category' = starification_cats," ", "" ))
+  add_header_above(c(" "," ", 'SOFA day1 Category' = starification_cats," ", ""))
+```
+
+
+```{r}
+# Define the data frame and variables
+dataframe_for_sup_table1 <- selected_df_imputed
+vars_in_sup_table1 <- c("MAP", "temperature", "heartrate", "respiratoryrate", "day1fio2", "day1pao2", "pco2", "ph", "urine", "albumin", "bilirubin", "wbc", "cirrhosis", "aids", "leukemia", "immunosuppression", "sodium_cat")
+cat_variables <- c("cirrhosis", "aids", "leukemia", "immunosuppression", "sodium_cat")  # Categorical variables
+stratifyby <- "sodium_cat"
+
+# Set variable labels
+variable_labels <- c(
+  "MAP" = "Mean Arterial Pressure",
+  "temperature" = "Temperature",
+  "heartrate" = "Heart Rate",
+  "respiratoryrate" = "Respiratory Rate",
+  "day1fio2" = "FiO2 on Day 1",
+  "day1pao2" = "PaO2 on Day 1",
+  "pco2" = "PCO2",
+  "ph" = "pH",
+  "urine" = "Urine Output",
+  "albumin" = "Albumin",
+  "bilirubin" = "Bilirubin",
+  "wbc" = "White Blood Cell Count",
+  "cirrhosis" = "Cirrhosis",
+  "aids" = "AIDS",
+  "leukemia" = "Leukemia",
+  "immunosuppression" = "Immunosuppression"
+)
+
+# Create the base table
+sup_table1_base <- matrix("", nrow = length(vars_in_sup_table1) + 2, ncol = 4)
+colnames(sup_table1_base) <- c("", "", "Mean (SD)", "Mean (SD)")
+
+# Fill in the table with statistics
+for (i in 1:length(vars_in_sup_table1)) {
+  sup_table1_base[i + 2, 1] <- variable_labels[vars_in_sup_table1[i]]
+  sup_table1_base[i + 2, 2] <- "Overall"
+  sup_table1_base[i + 2, 3] <- sprintf("%.2f (%.2f)", mean(dataframe_for_sup_table1[[vars_in_sup_table1[i]]], na.rm = TRUE), sd(dataframe_for_sup_table1[[vars_in_sup_table1[i]]], na.rm = TRUE))
+  sup_table1_base[i + 2, 4] <- ""
+  for (j in levels(dataframe_for_sup_table1[[stratifyby]])) {
+    sup_table1_base[i + 2, 4] <- paste(sup_table1_base[i + 2, 4], sprintf("%.2f (%.2f)", mean(dataframe_for_sup_table1[[vars_in_sup_table1[i]]][dataframe_for_sup_table1[[stratifyby]] == j], na.rm = TRUE), sd(dataframe_for_sup_table1[[vars_in_sup_table1[i]]][dataframe_for_sup_table1[[stratifyby]] == j], na.rm = TRUE)), sep = " / ")
+  }
+}
+
+# Print the table
+print(sup_table1_base)
+
 ```
 
 
