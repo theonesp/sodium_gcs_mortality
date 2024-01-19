@@ -186,6 +186,8 @@ gcs_baseline <- run_query( getSQL("sql/gcs_baseline.sql" ))
 admission_sodium <- run_query( getSQL("sql/admission_sodium.sql" ))
 charlson_score <- run_query( getSQL("sql/charlson_score.sql" ))
 ventilated_binary_first_day <- run_query( getSQL("sql/ventilated_binary_first_day.sql" ))
+adm_source <- run_query( getSQL("sql/adm_source.sql" ))
+adm_dx <- run_query( getSQL("sql/adm_dx.sql" ))
 ```
 
 # Left Join
