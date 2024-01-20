@@ -3,10 +3,6 @@ title: "03_tables_creation"
 # output: html_notebook
 ---
 
-```{r setup, include=FALSE}
-#load the data
-```
-
 # Environment
 
 ```{r}
@@ -34,7 +30,7 @@ dataframe_for_table1$unittype<-plyr::revalue(
   dataframe_for_table1$unittype,c( 'Neuro ICU'='Others' , 'SICU'= 'Others', 'Cardiac ICU'='Others' , 'CCU-CTICU'='Others'  ,'CSICU'='Others' , 'CTICU'='Others')
 )
 
-vars_in_table1<-c("age", "gender", "AP_grp", "ethnicity", "apachescore", "mechvent_day01", "unittype", "charlson_chf1", "charlson_liver1", "creatinine", "creatinine_great2", "gcs_baseline", "normal_gcs", "hosp_mortality","sodium_cat")
+vars_in_table1<-c("age", "gender", "AP_grp", "ethnicity", "apachescore", "mechvent_day01", "unittype", "charlson_chf1", "charlson_liver1", "creatinine", "creatinine_great2", "gcs_baseline", "normal_gcs", "hosp_mortality","sodium_cat","adm_source","sedation_score")
 # lists the variables we are going to be including in table1 (excepts for the stratification variable)
 
 dataframe_for_table1<-dataframe_for_table1[,vars_in_table1]
@@ -57,6 +53,8 @@ label(dataframe_for_table1$gcs_baseline) <- 'Baseline Glasgow Coma Scale'
 label(dataframe_for_table1$normal_gcs) <- 'Normal Glasgow Coma Scale'
 label(dataframe_for_table1$hosp_mortality) <- 'Hospital Mortality'
 label(dataframe_for_table1$sodium_cat) <- 'Sodium Category'
+label(dataframe_for_table1$adm_source) <- 'Admission Source'
+label(dataframe_for_table1$sedation_score) <- 'Sedation Score'
 # selects variable to stratify by and label is useful for prettyfying variable names we want to appear on table 1
 
 # detects whether a variable is categorical or not based on the number of distinct variables per category (10 is the threshold)

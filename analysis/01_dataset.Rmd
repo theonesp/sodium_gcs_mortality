@@ -31,6 +31,10 @@ library(Amelia)
 library(ggpubr)
 library(magrittr)
 library(PRISMAstatement)
+library(grid)
+library(gridExtra)
+library(glue)
+library(gridExtra)
 options(scipen=999)
 
 # useful functions
@@ -188,6 +192,8 @@ charlson_score <- run_query( getSQL("sql/charlson_score.sql" ))
 ventilated_binary_first_day <- run_query( getSQL("sql/ventilated_binary_first_day.sql" ))
 adm_source <- run_query( getSQL("sql/adm_source.sql" ))
 adm_dx <- run_query( getSQL("sql/adm_dx.sql" ))
+rass <- run_query( getSQL("sql/rass.sql" ))
+sedation_score <- run_query( getSQL("sql/sedation_score.sql" ))
 ```
 
 # Left Join
@@ -203,6 +209,9 @@ initial_dataset<-Reduce(function(...) merge(..., all.x=TRUE, by = "patientunitst
   ,acute_physiology_score_components
   ,allapachevars
   ,apachepatientresult
+  ,adm_source
+  ,adm_dx
+  ,sedation_score 
 ))
 ```
 
@@ -225,7 +234,7 @@ Unit type (medical, medical surgical, surgical, cardiac, cardiothoracic, and neu
 Mechanical ventilation during the first 24 hours of care was included as binary variable.
 
 ```{r}
-selected_df<-initial_dataset%>%dplyr::select(
+selected_df_cols<-initial_dataset%>%dplyr::select(
 # initial demographics  
 patientunitstayid,
 age,
@@ -311,18 +320,13 @@ day1eyes,
 day1pao2,
 day1fio2,
 respiratoryrate,
-MAP
+MAP,
+
+# extra variables after review
+adm_source,
+sedation_score
 
 )
-
-# factorizing variables
-selected_df$gender<-as.factor(selected_df$gender)
-selected_df$ethnicity<-as.factor(selected_df$ethnicity) 
-selected_df$AP_grp<-as.factor(selected_df$AP_grp)
-selected_df$unittype<-as.factor(selected_df$unittype)
-selected_df$hospitaladmitsource<-as.factor(selected_df$hospitaladmitsource)
-selected_df$mechvent_day01<-as.factor(selected_df$mechvent_day01)
-selected_df$hosp_mortality<-as.factor(selected_df$hosp_mortality)
 ```
 
 # Exclusion criteria
@@ -330,31 +334,38 @@ selected_df$hosp_mortality<-as.factor(selected_df$hosp_mortality)
 We are not excluding patients with a baseline sodium outside of our groups.
 
 ```{r}
-# cat('Initial number of patients:',nrow(selected_df))
-# 
-# selected_df<- selected_df[complete.cases(selected_df),]
-# cat('Final number of patients:',nrow(selected_df))
-print('Initial number of patients:')
-a<-nrow(selected_df)
+selected_df<-selected_df_cols
+# Initial number of patients
+cat('Initial number of patients:')
+a <- nrow(selected_df)
 a
 
-#exclude missing GCS sodium at baseline. Update here since labs and measurements weren't imputated before.
-print('Patients with incomplete data that are excluded')
-#selected_df<-selected_df[complete.cases(selected_df),]
-selected_df<-selected_df%>%filter(!is.na(gcs_baseline)&!is.na(sodium1)&!is.na(hosp_mortality))
-b<-nrow(selected_df)
-a-b
+# Exclude missing GCS, sodium, and hospital discharge status. Update here since labs and measurements weren't imputed before.
+print('Patients with missing gcs_baseline, sodium or hosp_mortality')
+selected_df %<>%
+  filter(!is.na(gcs_baseline) & !is.na(sodium1) & !is.na(hosp_mortality))
+b <- nrow(selected_df)
+a- b
 
+# Exclude missing sedation_score
+print('Patients with sedation score equal to "Exclude" that are excluded:')
+selected_df %<>%
+  filter(sedation_score != 'Exclude' | is.na(sedation_score))
+c <- nrow(selected_df)
+b - c
+
+# Final number of patients
 print('Final number of patients:')
-c<-nrow(selected_df)
-c
+d <- nrow(selected_df)
+d
+
+# Ajustar los valores para flow_exclusions
 
 flow_exclusions(
-  incl_counts = c(a, c),
-  total_label = "Initial Cohort",
-  incl_labels = c( "Final Number of patients"),
-  excl_labels = c("Patients with missing sodium, gcs and hospital discharge stauts are excluded"),
-  percent_of_total = TRUE
+  incl_counts = c(a, b, c),  # Utilizar estos valores
+  total_label = "Total eICU database",
+  incl_labels  = c("Patients with available sodium, gcs and hospital discharge status", "Final Cohort"),
+  excl_labels = c("Patients with missing sodium, gcs and hospital discharge status are excluded", "Patients with sedation score equal to Exclude that are excluded:")
 )
 ```
 
@@ -407,7 +418,6 @@ selected_df%<>%mutate(
     between(age,30,50) ~ '30 - <50',
     between(age,50,65) ~ '50 - <65',
     sodium1>= 65 ~ '>=65',
-    
   )
 )
 ```
@@ -415,7 +425,13 @@ selected_df%<>%mutate(
 # Setting proper datatype
 
 ```{r}
-selected_df%<>%mutate_at(c('cirrhosis','aids','leukemia','immunosuppression','charlson_chf1','charlson_liver1'), as.factor)
+# Factorizing variables using mutate_at
+selected_df %<>%
+  mutate_at(
+    vars(c('cirrhosis', 'aids', 'leukemia', 'immunosuppression', 'charlson_chf1', 'charlson_liver1',
+           'gender', 'ethnicity', 'AP_grp', 'unittype', 'hospitaladmitsource', 'mechvent_day01', 'hosp_mortality','adm_source','sedation_score')),
+    as.factor
+  )
 ```
 
 
@@ -424,7 +440,7 @@ selected_df%<>%mutate_at(c('cirrhosis','aids','leukemia','immunosuppression','ch
 ## Creating the subsets
 
 ```{r}
-sodium_split <- split( selected_df,  selected_df$sodium_cat)
+sodium_split<-split( selected_df,  selected_df$sodium_cat)
 ```
 
 ## Storing every subset in a different dataset
@@ -439,9 +455,25 @@ assign( paste('sodium_cat_',i,'_df',sep=''), sodium_split[[i]])
 
 ```{r}
 selected_df_imputed<-selected_df
-selected_df_imputed[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2","MAP","respiratoryrate")]<-apply(selected_df_imputed[,c("eyes","motor","verbal","meds","urine","wbc","temperature","heartrate","meanbp","ph","hematocrit","creatinine","albumin","pao2","pco2","bun","glucose","bilirubin","fio2"                     ,"admitsource","ejectfx","dischargelocation","amilocation","day1meds","day1verbal","day1motor","day1eyes","day1pao2","day1fio2","MAP","respiratoryrate")],2, function(x) median_imp(x) )
 
-selected_df_imputed[,c('cirrhosis','aids','leukemia','immunosuppression','charlson_chf1','charlson_liver1')]<-apply(selected_df_imputed[,c('cirrhosis','aids','leukemia','immunosuppression','charlson_chf1','charlson_liver1')],2, function(x) na_replace_zero(x) )
+# continous columns to impute
+cont_columns_to_impute <- c("eyes", "motor", "verbal", "meds", "urine", "wbc", "temperature", "heartrate", "meanbp", "ph", "hematocrit", "creatinine", "albumin", "pao2", "pco2", "bun", "glucose", "bilirubin", "fio2", "admitsource", "ejectfx", "dischargelocation", "amilocation", "day1meds", "day1verbal", "day1motor", "day1eyes", "day1pao2", "day1fio2", "MAP", "respiratoryrate")
+selected_df_imputed[, cont_columns_to_impute] <- apply(selected_df_imputed[, cont_columns_to_impute], 2, function(x) median_imp(x))
+
+# binary columns to impute
+cat_columns_to_impute <- c('cirrhosis','aids','leukemia','immunosuppression','charlson_chf1','charlson_liver1')
+selected_df_imputed[, cat_columns_to_impute] <- apply(selected_df_imputed[,cat_columns_to_impute], 2, function(x) na_replace_zero(x))
+
+# categorical columns to impute
+
+selected_df_imputed <- selected_df_imputed %>%
+  mutate(
+    adm_source = if_else(is.na(adm_source), 'Other/Unknown', adm_source),
+    sedation_score = if_else(is.na(selected_df_imputed$sedation_score),'Unknown',selected_df_imputed$sedation_score
+    )
+  )
+
+
 
 ```
 
@@ -457,10 +489,3 @@ sodium_cat_6_df<-selected_df_imputed%>%filter(sodium_cat%in%c(6,5))
 sodium_cat_7_df<-selected_df_imputed%>%filter(sodium_cat%in%c(7,5))
 sodium_cat_8_df<-selected_df_imputed%>%filter(sodium_cat%in%c(8,5))
 ```
-
-
-<!-- # Dataset Export -->
-
-<!-- ```{r} -->
-<!-- saveRDS(selected_df,file=paste('sodium_gcs_mediation_',Sys.Date(),'.Rds')) -->
-<!-- ``` -->
