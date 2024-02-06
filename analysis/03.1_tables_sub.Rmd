@@ -1,0 +1,152 @@
+---
+title: "03_tables_creation"
+# output: html_notebook
+---
+
+# Environment
+
+```{r}
+library(tableone)
+library(magrittr)
+library(dplyr)
+library(sqldf)
+library(summarytools)
+library(kableExtra)
+```
+
+## Table 1 Sedated
+
+All variables.  Stratification (ie column groupings) should be by sodium categories.
+
+```{r,echo = F}
+dataframe_for_table1<-df_sub_sedated
+
+
+# we are re-difining the 'Others' category
+dataframe_for_table1$unittype<-plyr::revalue(
+  dataframe_for_table1$unittype,c( 'Neuro ICU'='Others' , 'SICU'= 'Others', 'Cardiac ICU'='Others' , 'CCU-CTICU'='Others'  ,'CSICU'='Others' , 'CTICU'='Others')
+)
+
+vars_in_table1<-c("age", "gender", "AP_grp", "ethnicity", "apachescore", "mechvent_day01", "unittype", "charlson_chf1", "charlson_liver1", "creatinine", "creatinine_great2", "gcs_baseline", "normal_gcs", "hosp_mortality","sodium_cat","adm_source","sedation_score")
+# lists the variables we are going to be including in table1 (excepts for the stratification variable)
+
+dataframe_for_table1<-dataframe_for_table1[,vars_in_table1]
+cat_variables<-rep(NA, length(vars_in_table1))
+# creates a dataset only with select variable using our original dataset and generated an empty list that is going to be used for storing categorical variables 
+
+stratifyby<-"sodium_cat"
+label(dataframe_for_table1$age) <- 'Age'
+label(dataframe_for_table1$gender) <- 'Gender'
+label(dataframe_for_table1$AP_grp) <- 'APACHE Diagnosis Group'
+label(dataframe_for_table1$ethnicity) <- 'Ethnicity'
+label(dataframe_for_table1$apachescore) <- 'APACHE Score'
+label(dataframe_for_table1$mechvent_day01) <- 'Mechanical Ventilation on Day 1'
+label(dataframe_for_table1$unittype) <- 'ICU Type'
+label(dataframe_for_table1$charlson_chf1) <- 'Charlson Comorbidity - Congestive Heart Failure'
+label(dataframe_for_table1$charlson_liver1) <- 'Charlson Comorbidity - Liver Disease'
+label(dataframe_for_table1$creatinine) <- 'Creatinine'
+label(dataframe_for_table1$creatinine_great2) <- 'Creatinine > 2'
+label(dataframe_for_table1$gcs_baseline) <- 'Baseline Glasgow Coma Scale'
+label(dataframe_for_table1$normal_gcs) <- 'Normal Glasgow Coma Scale'
+label(dataframe_for_table1$hosp_mortality) <- 'Hospital Mortality'
+label(dataframe_for_table1$sodium_cat) <- 'Sodium Category'
+label(dataframe_for_table1$adm_source) <- 'Admission Source'
+label(dataframe_for_table1$sedation_score) <- 'Sedation Score'
+# selects variable to stratify by and label is useful for prettyfying variable names we want to appear on table 1
+
+# detects whether a variable is categorical or not based on the number of distinct variables per category (10 is the threshold)
+cont<-1
+for (i in 1:length(vars_in_table1) ) {
+  if ( n_distinct(dataframe_for_table1[vars_in_table1[i] ])<=10 ) {
+    print(i)
+    print(vars_in_table1[i])
+    print(names(dataframe_for_table1[vars_in_table1[i]]))
+    cat_variables[cont]<-names(dataframe_for_table1[vars_in_table1[i]])
+    cont<-cont+1
+  }
+}  
+cat_variables<-cat_variables[!is.na(cat_variables)]
+table1_base<-print(CreateTableOne(vars = vars_in_table1
+                                   ,strata = stratifyby
+                                  , factorVars = cat_variables
+    ,data = dataframe_for_table1, addOverall=T),varLabels = T ,nonnormal  = c('creatinine','gcs_baseline')
+)
+
+
+# run this in console for html output, the code below uses library kableExtra::
+# the line add_header_above() will need to be modified depending on the number of columns of the table
+starification_cats<-n_distinct(dataframe_for_table1[,stratifyby])
+table1_base %>%
+  kbl(caption = "Table 1 Sedated" , align = "c") %>%
+  kable_classic_2(full_width = F, html_font = "Cambria")%>%
+  add_header_above(c(" "," ", 'Sodium Band Category' = starification_cats," ", "" ))
+
+```
+## Table 1 Not Sedated
+
+All variables.  Stratification (ie column groupings) should be by sodium categories.
+
+```{r,echo = F}
+dataframe_for_table1<-df_sub_notsedated
+
+
+# we are re-difining the 'Others' category
+dataframe_for_table1$unittype<-plyr::revalue(
+  dataframe_for_table1$unittype,c( 'Neuro ICU'='Others' , 'SICU'= 'Others', 'Cardiac ICU'='Others' , 'CCU-CTICU'='Others'  ,'CSICU'='Others' , 'CTICU'='Others')
+)
+
+vars_in_table1<-c("age", "gender", "AP_grp", "ethnicity", "apachescore", "mechvent_day01", "unittype", "charlson_chf1", "charlson_liver1", "creatinine", "creatinine_great2", "gcs_baseline", "normal_gcs", "hosp_mortality","sodium_cat","adm_source","sedation_score")
+# lists the variables we are going to be including in table1 (excepts for the stratification variable)
+
+dataframe_for_table1<-dataframe_for_table1[,vars_in_table1]
+cat_variables<-rep(NA, length(vars_in_table1))
+# creates a dataset only with select variable using our original dataset and generated an empty list that is going to be used for storing categorical variables 
+
+stratifyby<-"sodium_cat"
+label(dataframe_for_table1$age) <- 'Age'
+label(dataframe_for_table1$gender) <- 'Gender'
+label(dataframe_for_table1$AP_grp) <- 'APACHE Diagnosis Group'
+label(dataframe_for_table1$ethnicity) <- 'Ethnicity'
+label(dataframe_for_table1$apachescore) <- 'APACHE Score'
+label(dataframe_for_table1$mechvent_day01) <- 'Mechanical Ventilation on Day 1'
+label(dataframe_for_table1$unittype) <- 'ICU Type'
+label(dataframe_for_table1$charlson_chf1) <- 'Charlson Comorbidity - Congestive Heart Failure'
+label(dataframe_for_table1$charlson_liver1) <- 'Charlson Comorbidity - Liver Disease'
+label(dataframe_for_table1$creatinine) <- 'Creatinine'
+label(dataframe_for_table1$creatinine_great2) <- 'Creatinine > 2'
+label(dataframe_for_table1$gcs_baseline) <- 'Baseline Glasgow Coma Scale'
+label(dataframe_for_table1$normal_gcs) <- 'Normal Glasgow Coma Scale'
+label(dataframe_for_table1$hosp_mortality) <- 'Hospital Mortality'
+label(dataframe_for_table1$sodium_cat) <- 'Sodium Category'
+label(dataframe_for_table1$adm_source) <- 'Admission Source'
+label(dataframe_for_table1$sedation_score) <- 'Sedation Score'
+# selects variable to stratify by and label is useful for prettyfying variable names we want to appear on table 1
+
+# detects whether a variable is categorical or not based on the number of distinct variables per category (10 is the threshold)
+cont<-1
+for (i in 1:length(vars_in_table1) ) {
+  if ( n_distinct(dataframe_for_table1[vars_in_table1[i] ])<=10 ) {
+    print(i)
+    print(vars_in_table1[i])
+    print(names(dataframe_for_table1[vars_in_table1[i]]))
+    cat_variables[cont]<-names(dataframe_for_table1[vars_in_table1[i]])
+    cont<-cont+1
+  }
+}  
+cat_variables<-cat_variables[!is.na(cat_variables)]
+table1_base<-print(CreateTableOne(vars = vars_in_table1
+                                   ,strata = stratifyby
+                                  , factorVars = cat_variables
+    ,data = dataframe_for_table1, addOverall=T),varLabels = T ,nonnormal  = c('creatinine','gcs_baseline')
+)
+
+
+# run this in console for html output, the code below uses library kableExtra::
+# the line add_header_above() will need to be modified depending on the number of columns of the table
+starification_cats<-n_distinct(dataframe_for_table1[,stratifyby])
+table1_base %>%
+  kbl(caption = "Table 1 Not Sedated" , align = "c") %>%
+  kable_classic_2(full_width = F, html_font = "Cambria")%>%
+  add_header_above(c(" "," ", 'Sodium Band Category' = starification_cats," ", "" ))
+
+```

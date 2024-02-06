@@ -19,11 +19,6 @@ library(kableExtra)
 All variables.  Stratification (ie column groupings) should be by sodium categories.
 
 ```{r,echo = F}
-dataframe_for_table1<-selected_df_imputed
-dataframe_for_table1$charlson_chf1<-as.factor(dataframe_for_table1$charlson_chf1)
-dataframe_for_table1$charlson_liver1<-as.factor(dataframe_for_table1$charlson_liver1)
-dataframe_for_table1$creatinine_great2<-as.factor(if_else(dataframe_for_table1$creatinine >2,1,0))
-
 
 # we are re-difining the 'Others' category
 dataframe_for_table1$unittype<-plyr::revalue(

@@ -347,25 +347,18 @@ selected_df %<>%
 b <- nrow(selected_df)
 a- b
 
-# Exclude missing sedation_score
-print('Patients with sedation score equal to "Exclude" that are excluded:')
-selected_df %<>%
-  filter(sedation_score != 'Exclude' | is.na(sedation_score))
-c <- nrow(selected_df)
-b - c
-
 # Final number of patients
 print('Final number of patients:')
-d <- nrow(selected_df)
-d
+c <- nrow(selected_df)
+c
 
 # Ajustar los valores para flow_exclusions
 
 flow_exclusions(
-  incl_counts = c(a, b, c),  # Utilizar estos valores
+  incl_counts = c(a, b),  # Utilizar estos valores
   total_label = "Total eICU database",
-  incl_labels  = c("Patients with available sodium, gcs and hospital discharge status", "Final Cohort"),
-  excl_labels = c("Patients with missing sodium, gcs and hospital discharge status are excluded", "Patients with sedation score equal to Exclude that are excluded:")
+  incl_labels  = c("Final Cohort"),
+  excl_labels = c("Patients with missing sodium, gcs and hospital discharge status are excluded")
 )
 ```
 
@@ -432,6 +425,8 @@ selected_df %<>%
            'gender', 'ethnicity', 'AP_grp', 'unittype', 'hospitaladmitsource', 'mechvent_day01', 'hosp_mortality','adm_source','sedation_score')),
     as.factor
   )
+
+selected_df$creatinine_great2<-as.factor(if_else(selected_df$creatinine >2,1,0))
 ```
 
 
@@ -477,7 +472,7 @@ selected_df_imputed <- selected_df_imputed %>%
 
 ```
 
-# Creating subanalyses dataframes
+# Creating categorical dataframes
 
 ```{r}
 selected_df_imputed$sodium_cat<-as.numeric(as.character(selected_df_imputed$sodium_cat))

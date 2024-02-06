@@ -1,0 +1,41 @@
+---
+title: "Sodium GCS Mediation Mortality"
+author: Miguel Ángel Armengol de la Hoz
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output:
+  # html_notebook:
+    code_folding: hide
+    number_sections: yes
+    theme: flatly
+    toc: yes
+    toc_float: yes
+
+knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = encoding, output_file = paste0(substr(inputFile,1,nchar(inputFile)-4)," ",Sys.Date(),'.html')) })
+---
+
+# Environment
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+```
+
+# Creating subanalises dataframes
+
+```{r}
+df_sub_sedated<-selected_df_imputed%>%filter(sedation_score=='Sedated')
+df_sub_notsedated<-selected_df_imputed%>%filter(sedation_score=='Not Sedated')
+```
+
+
+# Creating subanalyses categorical dataframes TODO
+
+```{r}
+selected_df_imputed$sodium_cat<-as.numeric(as.character(selected_df_imputed$sodium_cat))
+sodium_cat_1_df<-selected_df_imputed%>%filter(sodium_cat%in%c(1,5))
+sodium_cat_2_df<-selected_df_imputed%>%filter(sodium_cat%in%c(2,5))
+sodium_cat_3_df<-selected_df_imputed%>%filter(sodium_cat%in%c(3,5))
+sodium_cat_4_df<-selected_df_imputed%>%filter(sodium_cat%in%c(4,5))
+sodium_cat_6_df<-selected_df_imputed%>%filter(sodium_cat%in%c(6,5))
+sodium_cat_7_df<-selected_df_imputed%>%filter(sodium_cat%in%c(7,5))
+sodium_cat_8_df<-selected_df_imputed%>%filter(sodium_cat%in%c(8,5))
+```
