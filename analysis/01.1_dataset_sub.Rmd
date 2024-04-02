@@ -22,8 +22,8 @@ library(tidyverse)
 # Creating subanalises dataframes
 
 ```{r}
-df_sub_sedated<-selected_df_imputed%>%filter(sedation_score=='Sedated')
-df_sub_notsedated<-selected_df_imputed%>%filter(sedation_score=='Not Sedated')
+df_sub_sedated<-selected_df_imputed%>%filter(sedation_status=='Sedated')
+df_sub_notsedated<-selected_df_imputed%>%filter(sedation_status=='Not Sedated')
 ```
 
 

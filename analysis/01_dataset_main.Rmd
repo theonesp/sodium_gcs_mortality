@@ -193,7 +193,7 @@ ventilated_binary_first_day <- run_query( getSQL("sql/ventilated_binary_first_da
 adm_source <- run_query( getSQL("sql/adm_source.sql" ))
 adm_dx <- run_query( getSQL("sql/adm_dx.sql" ))
 rass <- run_query( getSQL("sql/rass.sql" ))
-sedation_score <- run_query( getSQL("sql/sedation_score.sql" ))
+sedation_status <- run_query( getSQL("sql/sedation_status.sql" ))
 ```
 
 # Left Join
@@ -211,7 +211,7 @@ initial_dataset<-Reduce(function(...) merge(..., all.x=TRUE, by = "patientunitst
   ,apachepatientresult
   ,adm_source
   ,adm_dx
-  ,sedation_score 
+  ,sedation_status 
 ))
 ```
 
@@ -324,7 +324,7 @@ MAP,
 
 # extra variables after review
 adm_source,
-sedation_score
+sedation_status
 
 )
 ```
@@ -422,7 +422,7 @@ selected_df%<>%mutate(
 selected_df %<>%
   mutate_at(
     vars(c('cirrhosis', 'aids', 'leukemia', 'immunosuppression', 'charlson_chf1', 'charlson_liver1',
-           'gender', 'ethnicity', 'AP_grp', 'unittype', 'hospitaladmitsource', 'mechvent_day01', 'hosp_mortality','adm_source','sedation_score')),
+           'gender', 'ethnicity', 'AP_grp', 'unittype', 'hospitaladmitsource', 'mechvent_day01', 'hosp_mortality','adm_source','sedation_status')),
     as.factor
   )
 
@@ -435,7 +435,7 @@ selected_df$creatinine_great2<-as.factor(if_else(selected_df$creatinine >2,1,0))
 ## Creating the subsets
 
 ```{r}
-sodium_split<-split( selected_df,  selected_df$sodium_cat)
+sodium_split<-split(selected_df, selected_df$sodium_cat)
 ```
 
 ## Storing every subset in a different dataset
@@ -464,7 +464,7 @@ selected_df_imputed[, cat_columns_to_impute] <- apply(selected_df_imputed[,cat_c
 selected_df_imputed <- selected_df_imputed %>%
   mutate(
     adm_source = if_else(is.na(adm_source), 'Other/Unknown', adm_source),
-    sedation_score = if_else(is.na(selected_df_imputed$sedation_score),'Unknown',selected_df_imputed$sedation_score
+    sedation_status = if_else(is.na(selected_df_imputed$sedation_status),'Unknown',selected_df_imputed$sedation_status
     )
   )
 
