@@ -186,7 +186,7 @@ final_sedation_status AS (
       WHEN sedation_category IS NOT NULL AND nursing_sedation_status = 'Sedated' THEN 'Sedated by Med'
       WHEN sedation_category IS NULL THEN 'Not sedated by Med'
       WHEN sedation_category IS NOT NULL AND nursing_sedation_status = 'Not Sedated' THEN 'Suspected error'
-    ELSE 'Uncategorized'
+    ELSE 'Not sedated by Med'
     END AS final_sedation_category
   FROM
     combined_sedation
