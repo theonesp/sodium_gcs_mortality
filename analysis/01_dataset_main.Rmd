@@ -24,11 +24,6 @@ library(sqldf)
 library(dplyr)
 library(tableone)
 library(Hmisc)
-library(caret)
-library(plotly)
-library(table1)
-library(Amelia)
-library(ggpubr)
 library(magrittr)
 library(PRISMAstatement)
 library(grid)
@@ -245,6 +240,7 @@ unittype,
 # apache related
 AP_grp,
 apachescore,
+electivesurgery,
 # comorb
 charlson_chf1,
 charlson_liver1,
@@ -415,6 +411,13 @@ selected_df%<>%mutate(
 )
 ```
 
+## New levels for ICU type
+
+```{r}
+selected_df$unittype <- if_else(selected_df$unittype %in% c("CSICU", "CTICU"), "CSICU+CTICU", selected_df$unittype)
+```
+
+
 # Setting proper datatype
 
 ```{r}
@@ -432,7 +435,7 @@ selected_df$creatinine_great2<-as.factor(if_else(selected_df$creatinine >2,1,0))
 
 # Separate Sodium bands datasets
 
-## Creating the subsets
+## Creating subsets
 
 ```{r}
 sodium_split<-split(selected_df, selected_df$sodium_cat)
@@ -468,7 +471,11 @@ selected_df_imputed <- selected_df_imputed %>%
     )
   )
 
-
+selected_df_imputed%<>%
+  mutate(
+    electivesurgery=
+    if_else(is.na(electivesurgery),0,electivesurgery)
+    )
 
 ```
 

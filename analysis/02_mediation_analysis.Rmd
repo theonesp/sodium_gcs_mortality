@@ -9,32 +9,23 @@ output:
     theme: flatly
     toc: yes
     toc_float: yes
-
-# knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = encoding, output_file = paste0(substr(inputFile,1,nchar(inputFile)-4)," ",Sys.Date(),'.html')) })
 ---
 
 # Environment
 
 ```{r message=FALSE, warning=FALSE,echo = F}
-library(knitr)
 library(dplyr)
 library(ggplot2)
 library(mediation)
 library(mgcv)
-library(plotly)
-library(voxel)
-library(htmlwidgets)
 library(readr)
 library(stringi)
 library(mediation)
 library(glmnet)
-library(data.table)
 library(table1)
 library(cowplot)
-library(regmedint)
 library(causalweight)
-library(table1)
-library(patchwork)
+
 '%!in%' <- function(x,y)!('%in%'(x,y))
 extract_mediation_summary <- function (x) { 
   clp <- 100 * x$conf.level
@@ -70,39 +61,6 @@ extract_mediation_summary <- function (x) {
                       paste(clp, "% CI Upper", sep = ""), "p-value")
   smat
 }
-```
-
-
-
-### Inclusion Criteria
-1. 
-
-Cohort before exclusion: 100773
-
-### Exclusion Criteria
-1. Remove stays that doesn't have APACHE variable, 6946 removed
-2. 
-
-
-## Check Missing Value
-```{r,echo = F}
-data<-selected_df_imputed%>%dplyr::select(sodium_cat,hosp_mortality,gcs_baseline,normal_gcs,AP_grp,ethnicity,gender,age,MAP,temperature,heartrate,respiratoryrate,mechvent_day01,day1fio2,day1pao2,pco2,ph,urine,creatinine,albumin,bilirubin,wbc,cirrhosis,aids,leukemia, immunosuppression,charlson_chf1,charlson_liver1)
-sum(complete.cases(data))
-nrow(data)
-temp<-data[which(!complete.cases(data)),]#37 missing gender will be excluded in the analysis
-# some data contain missing gender
-
-#Creating factor data for table1
-# data$sodium_cat<-factor(data$sodium_cat,
-#   levels = c(1,2,3,4,5,6,7,8),
-#   labels = c("115-119","120-124","125-129","130-134","135-139 (Reference)","140-144","145-149","150+")
-# )
-# data$hosp_mortality<-factor(data$hosp_mortality,
-#                             levels = c(0,1),
-#                             labels = c("Alive","Expired"))
-# data$normal_gcs<-factor(data$normal_gcs,
-#                         levels = c(0,1),
-#                         labels = c("No","Yes"))
 ```
 
 # Mediation package

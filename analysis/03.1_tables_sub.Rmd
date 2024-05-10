@@ -224,3 +224,12 @@ table1_base %>%
 If suspected error looks a lot like “sedated” then it may be reasonable to group them together.
 After reviewing table one we conclude we wouldn’t integrate. GCS suggests they’re not sedated.
 Nate 16/4/24 via whatsapp
+
+# Mediation tables for Surgery Type
+
+## Mediation table for Elective Surgery
+
+```{r}
+
+```
+

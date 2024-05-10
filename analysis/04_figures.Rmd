@@ -16,11 +16,8 @@ knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = e
 # Environment
 
 ```{r message=FALSE, warning=FALSE,echo = F}
-
 library(dplyr)
 library(ggplot2)
-library(mediation)
-library(plotly)
 library(gridExtra)
 library(stringi)
 '%!in%' <- function(x,y)!('%in%'(x,y))
@@ -71,16 +68,9 @@ total_effect<-total_effect%>%
 total_effect_copy<-total_effect%>%transmute(Estimate = or, '95% CI Upper' = or.ub,'95% CI Lower' = or.lb,cat = cat,'p-value' = p,results = "Total Effect (OR)")
 
 results_overall<-rbind(mediation_results_all,total_effect_copy)
-
-#fwrite(results_overall,file = "results_table.csv")
 ```
 
-
-# Final figures
-
-We are going to plot the OR of the estimates. The most interesting metrics to plot are Total Effect and Proportion Mediated
-
-## Figure 3: Prop. Mediated + Total Effect
+# Figure 3: Prop. Mediated + Total Effect
 
 ```{r }
 mediation_results_propmediated<-mediation_results_all%>%

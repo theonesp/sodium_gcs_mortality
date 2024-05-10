@@ -18,8 +18,9 @@ knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = e
 ```{r message=FALSE, warning=FALSE}
 library(tidyverse)
 ```
+# Subanalysis 1, Sedation Score
 
-# Creating subanalises dataframes
+## Creating subanalises dataframes
 
 ```{r}
 df_sub_sedated<-selected_df_imputed%>%filter(sedation_status=='Sedated by Med')
@@ -27,16 +28,111 @@ df_sub_notsedated<-selected_df_imputed%>%filter(sedation_status=='Not sedated by
 df_sub_susp_error<-selected_df_imputed%>%filter(sedation_status=='Suspected error')
 ```
 
+## Creating categorical dataframes for subanalyses
 
-# Creating subanalyses categorical dataframes TODO
+### Sedated by Med Group
 
 ```{r}
-selected_df_imputed$sodium_cat<-as.numeric(as.character(selected_df_imputed$sodium_cat))
-sodium_cat_1_df<-selected_df_imputed%>%filter(sodium_cat%in%c(1,5))
-sodium_cat_2_df<-selected_df_imputed%>%filter(sodium_cat%in%c(2,5))
-sodium_cat_3_df<-selected_df_imputed%>%filter(sodium_cat%in%c(3,5))
-sodium_cat_4_df<-selected_df_imputed%>%filter(sodium_cat%in%c(4,5))
-sodium_cat_6_df<-selected_df_imputed%>%filter(sodium_cat%in%c(6,5))
-sodium_cat_7_df<-selected_df_imputed%>%filter(sodium_cat%in%c(7,5))
-sodium_cat_8_df<-selected_df_imputed%>%filter(sodium_cat%in%c(8,5))
+df_sub_sedated$sodium_cat<-as.numeric(as.character(df_sub_sedated$sodium_cat))
+sodium_cat_1_sedated_df<-df_sub_sedated%>%filter(sodium_cat%in%c(1,5))
+sodium_cat_2_sedated_df<-df_sub_sedated%>%filter(sodium_cat%in%c(2,5))
+sodium_cat_3_sedated_df<-df_sub_sedated%>%filter(sodium_cat%in%c(3,5))
+sodium_cat_4_sedated_df<-df_sub_sedated%>%filter(sodium_cat%in%c(4,5))
+sodium_cat_6_sedated_df<-df_sub_sedated%>%filter(sodium_cat%in%c(6,5))
+sodium_cat_7_sedated_df<-df_sub_sedated%>%filter(sodium_cat%in%c(7,5))
+sodium_cat_8_sedated_df<-df_sub_sedated%>%filter(sodium_cat%in%c(8,5))
 ```
+
+### Non Sedated by Med Group
+
+```{r}
+df_sub_notsedated$sodium_cat<-as.numeric(as.character(df_sub_notsedated$sodium_cat))
+sodium_cat_1_notsedated_df<-df_sub_notsedated%>%filter(sodium_cat%in%c(1,5))
+sodium_cat_2_notsedated_df<-df_sub_notsedated%>%filter(sodium_cat%in%c(2,5))
+sodium_cat_3_notsedated_df<-df_sub_notsedated%>%filter(sodium_cat%in%c(3,5))
+sodium_cat_4_notsedated_df<-df_sub_notsedated%>%filter(sodium_cat%in%c(4,5))
+sodium_cat_6_notsedated_df<-df_sub_notsedated%>%filter(sodium_cat%in%c(6,5))
+sodium_cat_7_notsedated_df<-df_sub_notsedated%>%filter(sodium_cat%in%c(7,5))
+sodium_cat_8_notsedated_df<-df_sub_notsedated%>%filter(sodium_cat%in%c(8,5))
+```
+
+# Subanalysis 2, Surgery Type
+
+## Creating subanalises dataframes
+
+```{r}
+df_sub_electivesurgery<-selected_df_imputed%>%filter(electivesurgery==1)
+df_sub_not_electivesurgery<-selected_df_imputed%>%filter(electivesurgery==0)
+```
+
+
+Getting ready the table I use for generating the plots but without generating the plots
+
+The mediation estimate.
+The total effect OR.
+The total effect OR confidence interval.
+Maybe also P value?
+Columns: or    or.lb    or.u , p, Prop. Mediated (average)
+
+## Creating categorical dataframes for subanalyses
+
+### Elective Surgery Group
+
+```{r}
+df_sub_electivesurgery$sodium_cat <- as.numeric(as.character(df_sub_electivesurgery$sodium_cat))
+sodium_cat_1_electivesurgery_df <- df_sub_electivesurgery %>% filter(sodium_cat %in% c(1, 5))
+sodium_cat_2_electivesurgery_df <- df_sub_electivesurgery %>% filter(sodium_cat %in% c(2, 5))
+sodium_cat_3_electivesurgery_df <- df_sub_electivesurgery %>% filter(sodium_cat %in% c(3, 5))
+sodium_cat_4_electivesurgery_df <- df_sub_electivesurgery %>% filter(sodium_cat %in% c(4, 5))
+sodium_cat_6_electivesurgery_df <- df_sub_electivesurgery %>% filter(sodium_cat %in% c(6, 5))
+sodium_cat_7_electivesurgery_df <- df_sub_electivesurgery %>% filter(sodium_cat %in% c(7, 5))
+sodium_cat_8_electivesurgery_df <- df_sub_electivesurgery %>% filter(sodium_cat %in% c(8, 5))
+```
+
+### Non-Elective Surgery Group
+
+```{r}
+df_sub_not_electivesurgery$sodium_cat <- as.numeric(as.character(df_sub_not_electivesurgery$sodium_cat))
+sodium_cat_1_not_electivesurgery_df <- df_sub_not_electivesurgery %>% filter(sodium_cat %in% c(1, 5))
+sodium_cat_2_not_electivesurgery_df <- df_sub_not_electivesurgery %>% filter(sodium_cat %in% c(2, 5))
+sodium_cat_3_not_electivesurgery_df <- df_sub_not_electivesurgery %>% filter(sodium_cat %in% c(3, 5))
+sodium_cat_4_not_electivesurgery_df <- df_sub_not_electivesurgery %>% filter(sodium_cat %in% c(4, 5))
+sodium_cat_6_not_electivesurgery_df <- df_sub_not_electivesurgery %>% filter(sodium_cat %in% c(6, 5))
+sodium_cat_7_not_electivesurgery_df <- df_sub_not_electivesurgery %>% filter(sodium_cat %in% c(7, 5))
+sodium_cat_8_not_electivesurgery_df <- df_sub_not_electivesurgery %>% filter(sodium_cat %in% c(8, 5))
+```
+
+# Subanalysis 3, ICU Type
+
+## Creating subanalises dataframes
+
+```{r}
+# Subset for Cardiac ICU
+df_sub_cardiac_icu <- subset(selected_df_imputed, unittype == "Cardiac ICU")
+
+# Subset for CCU-CTICU
+df_sub_ccu_cticu <- subset(selected_df_imputed, unittype == "CCU-CTICU")
+
+# Subset for CSICU+CTICU
+df_sub_csicu_cticu <- subset(selected_df_imputed, unittype == "CSICU+CTICU")
+
+# Subset for Med-Surg ICU
+df_sub_medsurg_icu <- subset(selected_df_imputed, unittype == "Med-Surg ICU")
+
+# Subset for MICU
+df_sub_micu <- subset(selected_df_imputed, unittype == "MICU")
+
+# Subset for Neuro ICU
+df_sub_neuro_icu <- subset(selected_df_imputed, unittype == "Neuro ICU")
+
+# Subset for SICU
+df_sub_sicu <- subset(selected_df_imputed, unittype == "SICU")
+```
+
+Getting ready the table I use for generating the plots but without generating the plots
+
+The mediation estimate.
+The total effect OR.
+The total effect OR confidence interval.
+Maybe also P value?
+Columns: or    or.lb    or.u , p, Prop. Mediated (average)
