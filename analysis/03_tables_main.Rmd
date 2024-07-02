@@ -81,70 +81,6 @@ table1_base %>%
 
 ```
 
-## Table 2
-
-
-
-```{r}
-# Create a list of the sodium bands
-sodium_bands <- c("<120", "120 - <125", "125 - <130 ", "130 - <135", 
-                  "135 - <140", "140- <145", "145- <150", "≥150")
-
-# Initialize an empty data frame to store the results
-results_df <- data.frame(Sodium_Band_mEq_per_L = character(),
-                         ADE_Est_95CI = character(),
-                         ACME_Est_95CI = character(),
-                         Total_Effect_Est_95CI = character(),
-                         Total_Effect_OR_95CI = character(),
-                         Prop_Est_95CI = character(),
-                         stringsAsFactors = FALSE)
-
-# Loop through each sodium band
-for (i in seq_along(sodium_bands)) {
-  
-  # If sodium band is empty, add a row with "Ref."
-  if (i == 5) {
-    row <- data.frame(Sodium_Band_mEq_per_L = sodium_bands[i],
-                      ADE_Est_95CI = "Ref.",
-                      ACME_Est_95CI = "Ref.",
-                      Total_Effect_Est_95CI = "Ref.",
-                      Total_Effect_OR_95CI = "Ref.",
-                      Prop_Est_95CI = "Ref.",
-                      stringsAsFactors = FALSE)
-  } else {
-    # Otherwise, get the mediation results for the corresponding category
-    mediation_results <- get(paste0("mediation_results_cat", i, "_sum"))
-    
-    # Extract the estimates and confidence intervals
-    ade_estimate <- sprintf("%.2f (%.2f - %.2f)", mediation_results[3, 1], mediation_results[3, 2], mediation_results[3, 3])
-    acme_estimate <- sprintf("%.2f (%.2f - %.2f)", mediation_results[2, 1], mediation_results[2, 2], mediation_results[2, 3])
-    total_effect_estimate <- sprintf("%.2f (%.2f - %.2f)", mediation_results[1, 1], mediation_results[1, 2], mediation_results[1, 3])
-    total_effect_OR <- sprintf("%.2f (%.2f - %.2f)", exp(mediation_results[1, 1]), exp(mediation_results[1, 2]), exp(mediation_results[1, 3]))
-    prop_estimate <- sprintf("%.2f (%.2f - %.2f)", mediation_results[4, 1], mediation_results[4, 2], mediation_results[4, 3])
-    
-    # Create a row with the results for the current sodium band
-    row <- data.frame(Sodium_Band_mEq_per_L = sodium_bands[i],
-                      ADE_Est_95CI = ade_estimate,
-                      ACME_Est_95CI = acme_estimate,
-                      Total_Effect_Est_95CI = total_effect_estimate,
-                      Total_Effect_OR_95CI = paste0(total_effect_OR, "*"),
-                      Prop_Est_95CI = prop_estimate,
-                      stringsAsFactors = FALSE)
-  }
-  
-  # Add the row to the results data frame
-  results_df <- rbind(results_df, row)
-}
-
-# we are not showing this table in the end, it's not intuitive.
-results_df%>%select(-Total_Effect_OR_95CI)
-
-# Print the final results data frame
-results_df%>%
-  kbl(caption = "Table 2" , align = "c")
-
-```
-
 ## Supplemental Table 1
 
 ```{r}
@@ -262,6 +198,70 @@ print(sup_table1_base)
 
 
 # Deprecated
+
+## Table strat by band
+
+
+
+```{r}
+# Create a list of the sodium bands
+sodium_bands <- c("<120", "120 - <125", "125 - <130 ", "130 - <135", 
+                  "135 - <140", "140- <145", "145- <150", "≥150")
+
+# Initialize an empty data frame to store the results
+results_df <- data.frame(Sodium_Band_mEq_per_L = character(),
+                         ADE_Est_95CI = character(),
+                         ACME_Est_95CI = character(),
+                         Total_Effect_Est_95CI = character(),
+                         Total_Effect_OR_95CI = character(),
+                         Prop_Est_95CI = character(),
+                         stringsAsFactors = FALSE)
+
+# Loop through each sodium band
+for (i in seq_along(sodium_bands)) {
+  
+  # If sodium band is empty, add a row with "Ref."
+  if (i == 5) {
+    row <- data.frame(Sodium_Band_mEq_per_L = sodium_bands[i],
+                      ADE_Est_95CI = "Ref.",
+                      ACME_Est_95CI = "Ref.",
+                      Total_Effect_Est_95CI = "Ref.",
+                      Total_Effect_OR_95CI = "Ref.",
+                      Prop_Est_95CI = "Ref.",
+                      stringsAsFactors = FALSE)
+  } else {
+    # Otherwise, get the mediation results for the corresponding category
+    mediation_results <- get(paste0("mediation_results_cat", i, "_sum"))
+    
+    # Extract the estimates and confidence intervals
+    ade_estimate <- sprintf("%.2f (%.2f - %.2f)", mediation_results[3, 1], mediation_results[3, 2], mediation_results[3, 3])
+    acme_estimate <- sprintf("%.2f (%.2f - %.2f)", mediation_results[2, 1], mediation_results[2, 2], mediation_results[2, 3])
+    total_effect_estimate <- sprintf("%.2f (%.2f - %.2f)", mediation_results[1, 1], mediation_results[1, 2], mediation_results[1, 3])
+    total_effect_OR <- sprintf("%.2f (%.2f - %.2f)", exp(mediation_results[1, 1]), exp(mediation_results[1, 2]), exp(mediation_results[1, 3]))
+    prop_estimate <- sprintf("%.2f (%.2f - %.2f)", mediation_results[4, 1], mediation_results[4, 2], mediation_results[4, 3])
+    
+    # Create a row with the results for the current sodium band
+    row <- data.frame(Sodium_Band_mEq_per_L = sodium_bands[i],
+                      ADE_Est_95CI = ade_estimate,
+                      ACME_Est_95CI = acme_estimate,
+                      Total_Effect_Est_95CI = total_effect_estimate,
+                      Total_Effect_OR_95CI = paste0(total_effect_OR, "*"),
+                      Prop_Est_95CI = prop_estimate,
+                      stringsAsFactors = FALSE)
+  }
+  
+  # Add the row to the results data frame
+  results_df <- rbind(results_df, row)
+}
+
+# we are not showing this table in the end, it's not intuitive.
+results_df%>%select(-Total_Effect_OR_95CI)
+
+# Print the final results data frame
+results_df%>%
+  kbl(caption = "Table 2" , align = "c")
+
+```
 
 ## Table Sen. Analysis
 

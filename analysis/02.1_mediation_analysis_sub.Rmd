@@ -870,3 +870,350 @@ mediation_results_cat8_elective_sum
 ```{r}
 sens.out_elective8 <- medsens(mediation_results_cat8_elective, rho.by = 0.1, effect.type = "indirect", sims = 200)
 ```
+
+## SubAnalysis 2B: Not Elective Surgery SubAnalysis
+
+### Mediation package
+
+#### Baseline sodium_cat_1
+
+##### Mediation Analysis
+
+```{r}
+total_effect_not_elective<-NULL
+sodium_cat_1_not_electivesurgery_df$sodium_cat<-as.factor(sodium_cat_1_not_electivesurgery_df$sodium_cat)
+sodium_cat_1_not_electivesurgery_df$sodium_cat<-relevel(sodium_cat_1_not_electivesurgery_df$sodium_cat,ref = "5")
+fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat+ AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1
+
+                   , sodium_cat_1_not_electivesurgery_df
+,family = binomial)
+summ<-summary(fit_totaleffect)
+total_effect_not_elective<-rbind(total_effect_not_elective,data.frame(cat = 1,estimated = summ$coefficients[2],se = summ$coefficients[2+length(summ$coefficients)/4],p = summ$coefficients[2+3*length(summ$coefficients)/4]))
+
+
+
+fit_mediator<-lm(gcs_baseline ~ sodium_cat+AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1,
+data =  sodium_cat_1_not_electivesurgery_df)
+
+fit_dv<-glm(as.factor(hosp_mortality)~gcs_baseline+sodium_cat+ AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1
+                   , sodium_cat_1_not_electivesurgery_df
+           ,family = binomial("probit"))
+
+summary(fit_dv)
+
+#treat is the independend variable
+
+mediation_results_cat1_not_elective <- mediate(fit_mediator, fit_dv, 
+                                  treat="sodium_cat", mediator="gcs_baseline",control.value = 5,treat.value = 1,
+                                  sims = 1000)
+mediation_results_cat1_not_elective_sum<-as.data.frame(extract_mediation_summary(mediation_results_cat1_not_elective))
+mediation_results_cat1_not_elective_sum<-mediation_results_cat1_not_elective_sum[c(5,8,9,10),]
+
+#replace effect of treated group with average effect
+#mediation_results_cat1_not_elective_sum<-mediation_results_cat1_not_elective_sum[grepl("treated|Total Effect", rownames(mediation_results_cat1_not_elective_sum)), ]#
+
+mediation_results_cat1_not_elective_sum
+```
+
+##### Sensitivity Analysis
+
+```{r}
+sens.out_not_elective1 <- medsens(mediation_results_cat1_not_elective, rho.by = 0.1, effect.type = "indirect", sims = 200)
+log_info()
+```
+
+#### Baseline sodium_cat_2
+
+##### Mediation Analysis
+
+```{r}
+sodium_cat_2_not_electivesurgery_df$sodium_cat<-as.factor(sodium_cat_2_not_electivesurgery_df$sodium_cat)
+sodium_cat_2_not_electivesurgery_df$sodium_cat<-relevel(sodium_cat_2_not_electivesurgery_df$sodium_cat,ref = "5")
+fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat + AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1
+
+                   , sodium_cat_2_not_electivesurgery_df
+,family = binomial)
+summ<-summary(fit_totaleffect)
+total_effect_not_elective<-rbind(total_effect_not_elective,data.frame(cat = 2,estimated = summ$coefficients[2],se = summ$coefficients[2+length(summ$coefficients)/4],p = summ$coefficients[2+3*length(summ$coefficients)/4]))
+
+
+
+fit_mediator<-lm(gcs_baseline ~ sodium_cat + AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1,
+data =  sodium_cat_2_not_electivesurgery_df)
+fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1
+                   , sodium_cat_2_not_electivesurgery_df
+           ,family = binomial("probit"))
+summary(fit_dv)
+#treat is the independend variable
+mediation_results_cat2_not_elective <- mediate(fit_mediator, fit_dv, 
+                                  treat="sodium_cat", mediator="gcs_baseline",control.value = 5,treat.value = 2,
+                                  sims = 1000)
+mediation_results_cat2_not_elective_sum<-as.data.frame(extract_mediation_summary(mediation_results_cat2_not_elective))
+mediation_results_cat2_not_elective_sum<-mediation_results_cat2_not_elective_sum[c(5,8,9,10),]
+
+mediation_results_cat2_not_elective_sum
+```
+
+##### Sensitivity Analysis
+
+```{r}
+sens.out_not_elective2 <- medsens(mediation_results_cat2_not_elective, rho.by = 0.1, effect.type = "indirect", sims = 200)
+log_info()
+```
+
+#### Baseline sodium_cat_3
+
+##### Mediation Analysis
+
+```{r}
+sodium_cat_3_not_electivesurgery_df$sodium_cat<-as.factor(sodium_cat_3_not_electivesurgery_df$sodium_cat)
+sodium_cat_3_not_electivesurgery_df$sodium_cat<-relevel(sodium_cat_3_not_electivesurgery_df$sodium_cat,ref = "5")
+fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat+age+AP_grp+gender+ethnicity+unittype+charlson_liver1 +charlson_chf1+mechvent_day01+respiratoryrate+MAP
+
+                   , sodium_cat_3_not_electivesurgery_df
+,family = binomial)
+summ<-summary(fit_totaleffect)
+total_effect_not_elective<-rbind(total_effect_not_elective,data.frame(cat = 3,estimated = summ$coefficients[2],se = summ$coefficients[2+length(summ$coefficients)/4],p = summ$coefficients[2+3*length(summ$coefficients)/4]))
+
+fit_mediator<-lm(gcs_baseline ~ sodium_cat+AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1,
+data =  sodium_cat_3_not_electivesurgery_df)
+fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1
+                   , sodium_cat_3_not_electivesurgery_df
+           ,family = binomial("probit"))
+summary(fit_dv)
+#treat is the independend variable
+mediation_results_cat3_not_elective <- mediate(fit_mediator, fit_dv, 
+                                  treat="sodium_cat", mediator="gcs_baseline",control.value = 5,treat.value = 3,
+                                  sims = 1000)
+mediation_results_cat3_not_elective_sum<-as.data.frame(extract_mediation_summary(mediation_results_cat3_not_elective))
+mediation_results_cat3_not_elective_sum<-mediation_results_cat3_not_elective_sum[c(5,8,9,10),]
+
+mediation_results_cat3_not_elective_sum
+```
+
+##### Sensitivity Analysis
+
+```{r}
+sens.out_not_elective3 <- medsens(mediation_results_cat3_not_elective, rho.by = 0.1, effect.type = "indirect", sims = 200)
+```
+
+#### Baseline sodium_cat_4
+
+##### Mediation Analysis
+
+```{r}
+sodium_cat_4_not_electivesurgery_df$sodium_cat<-as.factor(sodium_cat_4_not_electivesurgery_df$sodium_cat)
+sodium_cat_4_not_electivesurgery_df$sodium_cat<-relevel(sodium_cat_4_not_electivesurgery_df$sodium_cat,ref = "5")
+fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat+AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1
+                   , sodium_cat_4_not_electivesurgery_df
+,family = binomial)
+summ<-summary(fit_totaleffect)
+total_effect_not_elective<-rbind(total_effect_not_elective,data.frame(cat = 4,estimated = summ$coefficients[2],se = summ$coefficients[2+length(summ$coefficients)/4],p = summ$coefficients[2+3*length(summ$coefficients)/4]))
+
+
+fit_mediator<-lm(gcs_baseline ~ sodium_cat+AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1,
+data =  sodium_cat_4_not_electivesurgery_df)
+fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1
+                   , sodium_cat_4_not_electivesurgery_df
+           ,family = binomial("probit"))
+summary(fit_dv)
+#treat is the independend variable
+mediation_results_cat4_not_elective <- mediate(fit_mediator, fit_dv, 
+                                  treat="sodium_cat", mediator="gcs_baseline",control.value = 5,treat.value = 4,
+                                  sims = 1000)
+mediation_results_cat4_not_elective_sum<-as.data.frame(extract_mediation_summary(mediation_results_cat4_not_elective))
+mediation_results_cat4_not_elective_sum<-mediation_results_cat4_not_elective_sum[c(5,8,9,10),]
+mediation_results_cat4_not_elective_sum
+
+```
+
+##### Sensitivity Analysis
+
+```{r}
+sens.out_not_elective4 <- medsens(mediation_results_cat4_not_elective, rho.by = 0.1, effect.type = "indirect", sims = 200)
+```
+
+#### Baseline sodium_cat_6
+
+##### Mediation Analysis
+
+```{r}
+sodium_cat_6_not_electivesurgery_df$sodium_cat<-as.factor(sodium_cat_6_not_electivesurgery_df$sodium_cat)
+sodium_cat_6_not_electivesurgery_df$sodium_cat<-relevel(sodium_cat_6_not_electivesurgery_df$sodium_cat,ref = "5")
+fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat+AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1
+
+                   , sodium_cat_6_not_electivesurgery_df
+,family = binomial)
+summ<-summary(fit_totaleffect)
+total_effect_not_elective<-rbind(total_effect_not_elective,data.frame(cat = 6,estimated = summ$coefficients[2],se = summ$coefficients[2+length(summ$coefficients)/4],p = summ$coefficients[2+3*length(summ$coefficients)/4]))
+
+
+fit_mediator<-lm(gcs_baseline ~ sodium_cat+AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1,
+data =  sodium_cat_6_not_electivesurgery_df)
+fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat+AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1
+                   , sodium_cat_6_not_electivesurgery_df
+           ,family = binomial("probit"))
+summary(fit_dv)
+#treat is the independend variable
+mediation_results_cat6_not_elective <- mediate(fit_mediator, fit_dv, 
+                                  treat="sodium_cat", mediator="gcs_baseline",control.value = 5,treat.value = 6,
+                                  sims = 1000)
+mediation_results_cat6_not_elective_sum<-as.data.frame(extract_mediation_summary(mediation_results_cat6_not_elective))
+mediation_results_cat6_not_elective_sum<-mediation_results_cat6_not_elective_sum[c(5,8,9,10),]
+mediation_results_cat6_not_elective_sum
+```
+
+##### Sensitivity Analysis
+
+```{r}
+sens.out_not_elective6 <- medsens(mediation_results_cat6_not_elective, rho.by = 0.1, effect.type = "indirect", sims = 200)
+```
+
+#### Baseline sodium_cat_7
+
+##### Mediation Analysis
+
+```{r}
+sodium_cat_7_not_electivesurgery_df$sodium_cat<-as.factor(sodium_cat_7_not_electivesurgery_df$sodium_cat)
+sodium_cat_7_not_electivesurgery_df$sodium_cat<-relevel(sodium_cat_7_not_electivesurgery_df$sodium_cat,ref = "5")
+fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat+AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1
+
+                   , sodium_cat_7_not_electivesurgery_df
+,family = binomial)
+summ<-summary(fit_totaleffect)
+total_effect_not_elective<-rbind(total_effect_not_elective,data.frame(cat = 7,estimated = summ$coefficients[2],se = summ$coefficients[2+length(summ$coefficients)/4],p = summ$coefficients[2+3*length(summ$coefficients)/4]))
+
+
+fit_mediator<-lm(gcs_baseline ~ sodium_cat + AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1,
+data =  sodium_cat_7_not_electivesurgery_df)
+fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat + AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1
+                   , sodium_cat_7_not_electivesurgery_df
+           ,family = binomial("probit"))
+summary(fit_dv)
+#treat is the independend variable
+mediation_results_cat7_not_elective <- mediate(fit_mediator, fit_dv, 
+                                  treat="sodium_cat", mediator="gcs_baseline",control.value = 5,treat.value = 7,
+                                  sims = 1000)
+mediation_results_cat7_not_elective_sum<-as.data.frame(extract_mediation_summary(mediation_results_cat7_not_elective))
+mediation_results_cat7_not_elective_sum<-mediation_results_cat7_not_elective_sum[c(5,8,9,10),]
+mediation_results_cat7_not_elective_sum
+```
+
+##### Sensitivity Analysis
+
+```{r}
+sens.out_not_elective7 <- medsens(mediation_results_cat7_not_elective, rho.by = 0.1, effect.type = "indirect", sims = 200)
+```
+
+#### Baseline sodium_cat_8
+
+##### Mediation Analysis
+
+```{r}
+sodium_cat_8_not_electivesurgery_df$sodium_cat<-as.factor(sodium_cat_8_not_electivesurgery_df$sodium_cat)
+sodium_cat_8_not_electivesurgery_df$sodium_cat<-relevel(sodium_cat_8_not_electivesurgery_df$sodium_cat,ref = "5")
+fit_totaleffect<-glm(as.factor(hosp_mortality)~sodium_cat + AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1
+                   , sodium_cat_8_not_electivesurgery_df
+,family = binomial)
+summ<-summary(fit_totaleffect)
+total_effect_not_elective<-rbind(total_effect_not_elective,data.frame(cat = 8,estimated = summ$coefficients[2],se = summ$coefficients[2+length(summ$coefficients)/4],p = summ$coefficients[2+3*length(summ$coefficients)/4]))
+
+
+fit_mediator<-lm(gcs_baseline ~ sodium_cat + AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1,
+data =  sodium_cat_8_not_electivesurgery_df)
+fit_dv<-glm(as.factor(hosp_mortality) ~gcs_baseline+sodium_cat + AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1
+                   , sodium_cat_8_not_electivesurgery_df
+           ,family = binomial("probit"))
+summary(fit_dv)
+#treat is the independend variable
+mediation_results_cat8_not_elective <- mediate(fit_mediator, fit_dv, 
+                                  treat="sodium_cat", mediator="gcs_baseline",control.value = 5,treat.value = 8,
+                                  sims = 1000)
+mediation_results_cat8_not_elective_sum<-as.data.frame(extract_mediation_summary(mediation_results_cat8_not_elective))
+mediation_results_cat8_not_elective_sum<-mediation_results_cat8_not_elective_sum[c(5,8,9,10),]
+mediation_results_cat8_not_elective_sum
+```
+
+##### Sensitivity Analysis
+
+```{r}
+sens.out_not_elective8 <- medsens(mediation_results_cat8_not_elective, rho.by = 0.1, effect.type = "indirect", sims = 200)
+```
+
+## Subanalysis 3, ICU Type
+
+```{r}
+# Function to perform mediation analysis
+perform_mediation_analysis <- function(df, cat_value, icu_name) {
+  # Convert sodium_cat to factor and set the reference
+  df$sodium_cat <- as.factor(df$sodium_cat)
+  df$sodium_cat <- relevel(df$sodium_cat, ref = "5")
+  
+  # Fit the total effect model
+  fit_totaleffect <- glm(as.factor(hosp_mortality) ~ sodium_cat + AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1,
+                         data = df, family = binomial)
+  summ <- summary(fit_totaleffect)
+  
+  # Save the total effect results
+  total_effect <- data.frame(cat = cat_value, estimated = summ$coefficients[2], se = summ$coefficients[2 + length(summ$coefficients) / 4], p = summ$coefficients[2 + 3 * length(summ$coefficients) / 4])
+  
+  # Fit the mediator model
+  fit_mediator <- lm(gcs_baseline ~ sodium_cat + AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1, data = df)
+  
+  # Fit the dependent variable model
+  fit_dv <- glm(as.factor(hosp_mortality) ~ gcs_baseline + sodium_cat + AP_grp + ethnicity + gender + age + MAP + temperature + heartrate + respiratoryrate + mechvent_day01 + day1fio2 + day1pao2 + pco2 + ph + urine + creatinine + albumin + bilirubin + wbc + cirrhosis + aids + leukemia + immunosuppression + charlson_chf1 + charlson_liver1,
+                data = df, family = binomial("probit"))
+  
+  # Perform the mediation analysis
+  mediation_results <- mediate(fit_mediator, fit_dv, treat = "sodium_cat", mediator = "gcs_baseline", control.value = 5, treat.value = cat_value, sims = 1000)
+  mediation_results_sum <- as.data.frame(extract_mediation_summary(mediation_results))
+  mediation_results_sum <- mediation_results_sum[c(5, 8, 9, 10),]
+  
+  # Perform the sensitivity analysis
+  sens_out <- medsens(mediation_results, rho.by = 0.1, effect.type = "indirect", sims = 200)
+  
+  return(list(total_effect = total_effect, mediation_results_sum = mediation_results_sum, sens_out = sens_out))
+}
+
+# Values of sodium_cat to analyze
+sodium_cat_values <- c(1, 2, 3, 4, 6, 7, 8)
+total_effect_results <- list()
+mediation_summary_results <- list()
+sensitivity_results <- list()
+
+# Counter to track progress
+total_iterations <- length(icu_names) * length(sodium_cat_values)
+current_iteration <- 0
+
+# Apply the mediation analysis function to each ICU subset and each sodium_cat category
+for (icu in icu_names) {
+  for (cat_value in sodium_cat_values) {
+    # Increment the progress counter
+    current_iteration <- current_iteration + 1
+    
+    # Log progress
+    message(sprintf("Starting analysis for ICU: %s, category: %d (%d/%d)", icu, cat_value, current_iteration, total_iterations))
+    
+    df_name <- paste0("sodium_cat_", cat_value, "_", icu, "_df")
+    df <- get(df_name)
+    
+    # Perform the mediation analysis
+    analysis_results <- perform_mediation_analysis(df, cat_value, icu)
+    
+    # Save the total effect results
+    total_effect_results[[paste0(icu, "_cat_", cat_value)]] <- analysis_results$total_effect
+    
+    # Save the mediation analysis results
+    mediation_summary_results[[paste0(icu, "_cat_", cat_value)]] <- analysis_results$mediation_results_sum
+    
+    # Save the sensitivity analysis results
+    sensitivity_results[[paste0(icu, "_cat_", cat_value)]] <- analysis_results$sens_out
+    
+    # Log completion of the iteration
+    message(sprintf("Completed analysis for ICU: %s, category: %d (%d/%d)", icu, cat_value, current_iteration, total_iterations))
+  }
+}
+
+message("Mediation analysis completed for all categories and ICU types.")
+```
+

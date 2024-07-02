@@ -9,80 +9,26 @@ title: "03_tables_creation"
 library(tableone)
 library(magrittr)
 library(dplyr)
-library(sqldf)
 library(summarytools)
 library(kableExtra)
+library(openxlsx)
+library(stringi)
+library(officer)
+library(DT)
+
+# Function to save results to a Word document
+save_to_word <- function(data, file_name, title) {
+  doc <- read_docx()
+  doc <- doc %>%
+    body_add_par(title, style = "heading 1") %>%
+    body_add_table(value = data, style = "table_template")
+  
+  print(doc, target = file_name)
+}
 ```
 
-## Table 1 Sedated
 
-All variables.  Stratification (ie column groupings) should be by sodium categories.
-
-```{r,echo = F}
-dataframe_for_table1<-df_sub_sedated
-
-
-# we are re-difining the 'Others' category
-dataframe_for_table1$unittype<-plyr::revalue(
-  dataframe_for_table1$unittype,c( 'Neuro ICU'='Others' , 'SICU'= 'Others', 'Cardiac ICU'='Others' , 'CCU-CTICU'='Others'  ,'CSICU'='Others' , 'CTICU'='Others')
-)
-
-vars_in_table1<-c("age", "gender", "AP_grp", "ethnicity", "apachescore", "mechvent_day01", "unittype", "charlson_chf1", "charlson_liver1", "creatinine", "creatinine_great2", "gcs_baseline", "normal_gcs", "hosp_mortality","sodium_cat","adm_source","sedation_status")
-# lists the variables we are going to be including in table1 (excepts for the stratification variable)
-
-dataframe_for_table1<-dataframe_for_table1[,vars_in_table1]
-cat_variables<-rep(NA, length(vars_in_table1))
-# creates a dataset only with select variable using our original dataset and generated an empty list that is going to be used for storing categorical variables 
-
-stratifyby<-"sodium_cat"
-label(dataframe_for_table1$age) <- 'Age'
-label(dataframe_for_table1$gender) <- 'Gender'
-label(dataframe_for_table1$AP_grp) <- 'APACHE Diagnosis Group'
-label(dataframe_for_table1$ethnicity) <- 'Ethnicity'
-label(dataframe_for_table1$apachescore) <- 'APACHE Score'
-label(dataframe_for_table1$mechvent_day01) <- 'Mechanical Ventilation on Day 1'
-label(dataframe_for_table1$unittype) <- 'ICU Type'
-label(dataframe_for_table1$charlson_chf1) <- 'Charlson Comorbidity - Congestive Heart Failure'
-label(dataframe_for_table1$charlson_liver1) <- 'Charlson Comorbidity - Liver Disease'
-label(dataframe_for_table1$creatinine) <- 'Creatinine'
-label(dataframe_for_table1$creatinine_great2) <- 'Creatinine > 2'
-label(dataframe_for_table1$gcs_baseline) <- 'Baseline Glasgow Coma Scale'
-label(dataframe_for_table1$normal_gcs) <- 'Normal Glasgow Coma Scale'
-label(dataframe_for_table1$hosp_mortality) <- 'Hospital Mortality'
-label(dataframe_for_table1$sodium_cat) <- 'Sodium Category'
-label(dataframe_for_table1$adm_source) <- 'Admission Source'
-label(dataframe_for_table1$sedation_status) <- 'Sedation Status'
-# selects variable to stratify by and label is useful for prettyfying variable names we want to appear on table 1
-
-# detects whether a variable is categorical or not based on the number of distinct variables per category (10 is the threshold)
-cont<-1
-for (i in 1:length(vars_in_table1) ) {
-  if ( n_distinct(dataframe_for_table1[vars_in_table1[i] ])<=10 ) {
-    print(i)
-    print(vars_in_table1[i])
-    print(names(dataframe_for_table1[vars_in_table1[i]]))
-    cat_variables[cont]<-names(dataframe_for_table1[vars_in_table1[i]])
-    cont<-cont+1
-  }
-}  
-cat_variables<-cat_variables[!is.na(cat_variables)]
-table1_base<-print(CreateTableOne(vars = vars_in_table1
-                                   ,strata = stratifyby
-                                  , factorVars = cat_variables
-    ,data = dataframe_for_table1, addOverall=T),varLabels = T ,nonnormal  = c('creatinine','gcs_baseline')
-)
-
-
-# run this in console for html output, the code below uses library kableExtra::
-# the line add_header_above() will need to be modified depending on the number of columns of the table
-starification_cats<-n_distinct(dataframe_for_table1[,stratifyby])
-table1_base %>%
-  kbl(caption = "Table 1 Sedated" , align = "c") %>%
-  kable_classic_2(full_width = F, html_font = "Cambria")%>%
-  add_header_above(c(" "," ", 'Sodium Band Category' = starification_cats," ", "" ))
-
-```
-## Table 1 Not Sedated
+## Sup Table 2: Not Sedated
 
 All variables.  Stratification (ie column groupings) should be by sodium categories.
 
@@ -140,6 +86,7 @@ table1_base<-print(CreateTableOne(vars = vars_in_table1
     ,data = dataframe_for_table1, addOverall=T),varLabels = T ,nonnormal  = c('creatinine','gcs_baseline')
 )
 
+write.csv(table1_base, file = "sup_tables/table1_not_sedated.csv")
 
 # run this in console for html output, the code below uses library kableExtra::
 # the line add_header_above() will need to be modified depending on the number of columns of the table
@@ -150,9 +97,80 @@ table1_base %>%
   add_header_above(c(" "," ", 'Sodium Band Category' = starification_cats," ", "" ))
 
 ```
+## Sup Table 3: Sedated
+
+All variables.  Stratification (ie column groupings) should be by sodium categories.
+
+```{r,echo = F}
+dataframe_for_table1<-df_sub_sedated
 
 
-## Table 1 Suspected error
+# we are re-difining the 'Others' category
+dataframe_for_table1$unittype<-plyr::revalue(
+  dataframe_for_table1$unittype,c( 'Neuro ICU'='Others' , 'SICU'= 'Others', 'Cardiac ICU'='Others' , 'CCU-CTICU'='Others'  ,'CSICU'='Others' , 'CTICU'='Others')
+)
+
+vars_in_table1<-c("age", "gender", "AP_grp", "ethnicity", "apachescore", "mechvent_day01", "unittype", "charlson_chf1", "charlson_liver1", "creatinine", "creatinine_great2", "gcs_baseline", "normal_gcs", "hosp_mortality","sodium_cat","adm_source","sedation_status")
+# lists the variables we are going to be including in table1 (excepts for the stratification variable)
+
+dataframe_for_table1<-dataframe_for_table1[,vars_in_table1]
+cat_variables<-rep(NA, length(vars_in_table1))
+# creates a dataset only with select variable using our original dataset and generated an empty list that is going to be used for storing categorical variables 
+
+stratifyby<-"sodium_cat"
+label(dataframe_for_table1$age) <- 'Age'
+label(dataframe_for_table1$gender) <- 'Gender'
+label(dataframe_for_table1$AP_grp) <- 'APACHE Diagnosis Group'
+label(dataframe_for_table1$ethnicity) <- 'Ethnicity'
+label(dataframe_for_table1$apachescore) <- 'APACHE Score'
+label(dataframe_for_table1$mechvent_day01) <- 'Mechanical Ventilation on Day 1'
+label(dataframe_for_table1$unittype) <- 'ICU Type'
+label(dataframe_for_table1$charlson_chf1) <- 'Charlson Comorbidity - Congestive Heart Failure'
+label(dataframe_for_table1$charlson_liver1) <- 'Charlson Comorbidity - Liver Disease'
+label(dataframe_for_table1$creatinine) <- 'Creatinine'
+label(dataframe_for_table1$creatinine_great2) <- 'Creatinine > 2'
+label(dataframe_for_table1$gcs_baseline) <- 'Baseline Glasgow Coma Scale'
+label(dataframe_for_table1$normal_gcs) <- 'Normal Glasgow Coma Scale'
+label(dataframe_for_table1$hosp_mortality) <- 'Hospital Mortality'
+label(dataframe_for_table1$sodium_cat) <- 'Sodium Category'
+label(dataframe_for_table1$adm_source) <- 'Admission Source'
+label(dataframe_for_table1$sedation_status) <- 'Sedation Status'
+# selects variable to stratify by and label is useful for prettyfying variable names we want to appear on table 1
+
+# detects whether a variable is categorical or not based on the number of distinct variables per category (10 is the threshold)
+cont<-1
+for (i in 1:length(vars_in_table1) ) {
+  if ( n_distinct(dataframe_for_table1[vars_in_table1[i] ])<=10 ) {
+    print(i)
+    print(vars_in_table1[i])
+    print(names(dataframe_for_table1[vars_in_table1[i]]))
+    cat_variables[cont]<-names(dataframe_for_table1[vars_in_table1[i]])
+    cont<-cont+1
+  }
+}  
+cat_variables <- cat_variables[!is.na(cat_variables)]
+table1_base <- print(CreateTableOne(vars = vars_in_table1,
+                                    strata = stratifyby,
+                                    factorVars = cat_variables,
+                                    data = dataframe_for_table1, addOverall = TRUE), varLabels = TRUE, nonnormal = c('creatinine', 'gcs_baseline')
+)
+
+## Save to a CSV file
+write.csv(table1_base, file = "sup_tables/table1_sedated.csv")
+
+# Run this in console for HTML output, the code below uses library kableExtra::
+# The line add_header_above() will need to be modified depending on the number of columns of the table
+starification_cats <- n_distinct(dataframe_for_table1[, stratifyby])
+table1_base %>%
+  kbl(caption = "Table 1 Sedated", align = "c") %>%
+  kable_classic_2(full_width = FALSE, html_font = "Cambria") %>%
+  add_header_above(c(" ", " ", 'Sodium Band Category' = starification_cats, " ", ""))
+
+
+
+```
+
+## Exploratory Table Suspected error
 
 All variables.  Stratification (ie column groupings) should be by sodium categories.
 
@@ -219,17 +237,222 @@ table1_base %>%
   kable_classic_2(full_width = F, html_font = "Cambria")%>%
   add_header_above(c(" "," ", 'Sodium Band Category' = starification_cats," ", "" ))
 
+# Function to save results to a Word document
+save_to_word <- function(data, file_name, title) {
+  doc <- read_docx()
+  doc <- doc %>%
+    body_add_par(title, style = "heading 1") %>%
+    body_add_table(value = data, style = "table_template")
+  
+  print(doc, target = file_name)
+}
+
+# Save overall elective and not elective results
+save_to_word(table1_base, "sup_tables/Mediation Analysis Elective Surgery.docx","Mediation Analysis Elective Surgery")
+
 ```
 
 If suspected error looks a lot like “sedated” then it may be reasonable to group them together.
 After reviewing table one we conclude we wouldn’t integrate. GCS suggests they’re not sedated.
 Nate 16/4/24 via whatsapp
 
-# Mediation tables for Surgery Type
-
-## Mediation table for Elective Surgery
+### Results export
 
 ```{r}
+# Save overall elective and not elective results
+
+save_to_word(results_overall_not_elective, "sup_tables/Mediation Analysis Not Elective Surgery.docx","Mediation Analysis Not Elective Surgery")
 
 ```
 
+
+
+# Sup. Table 4A: Mediation tables for ICU Types
+
+```{r}
+library(dplyr)
+library(tibble)
+
+# Define the function to process mediation results
+process_mediation_results_uci <- function(mediation_result, category) {
+  mediation_result$cat <- category
+  mediation_result$results <- c("Total Effect", "ACME (average)", "ADE (average)", "Prop. Mediated (average)")
+  
+  # Round p_value to 3 decimal places if p_value column exists
+  if ("p_value" %in% colnames(mediation_result)) {
+    mediation_result <- mediation_result %>% mutate(p_value = round(p_value, 3))
+  }
+  
+  return(mediation_result)
+}
+
+# Function to calculate total effect OR for each category
+calculate_total_effect_or <- function(df) {
+  total_effect_rows <- df %>% filter(results == "Total Effect")
+  if (!all(c("Estimate", "95% CI Lower", "95% CI Upper") %in% colnames(total_effect_rows))) {
+    stop("Required columns are missing in the dataframe")
+  }
+  
+  total_effect_or <- total_effect_rows %>%
+    transmute(
+      Estimate = exp(Estimate),
+      `95% CI Lower` = exp(`95% CI Lower`),
+      `95% CI Upper` = exp(`95% CI Upper`),
+      cat,
+      results = "Total Effect (OR)"
+    )
+  
+  # Include p_value if it exists and is not all NA
+  if ("p_value" %in% colnames(total_effect_rows) && !all(is.na(total_effect_rows$p_value))) {
+    total_effect_or <- total_effect_or %>%
+      mutate(p_value = mean(total_effect_rows$p_value, na.rm = TRUE))
+  }
+  
+  return(total_effect_or)
+}
+
+# Initialize a list to store combined results for each ICU type
+icu_types <- unique(sub("cat_\\d+", "", names(mediation_summary_results)))
+results_list <- setNames(vector("list", length(icu_types)), icu_types)
+
+# Iterate through the list and process each dataframe
+for (name in names(mediation_summary_results)) {
+  # Extract the ICU type and category from the name
+  parts <- unlist(strsplit(name, "_cat_"))
+  uci_type <- parts[1]
+  category <- as.numeric(parts[2])
+  
+  # Process the mediation results
+  processed_results <- process_mediation_results_uci(mediation_summary_results[[name]], category)
+  
+  # Combine the results by ICU type, initialize with an empty data frame if NULL
+  if (is.null(results_list[[uci_type]])) {
+    results_list[[uci_type]] <- processed_results
+  } else {
+    results_list[[uci_type]] <- bind_rows(results_list[[uci_type]], processed_results)
+  }
+}
+
+# Calculate and add total effect OR for each ICU type
+for (icu_type in names(results_list)) {
+  if (!is.null(results_list[[icu_type]])) {
+    total_effect_or <- calculate_total_effect_or(results_list[[icu_type]])
+    
+    # Append the Total Effect (OR) row
+    results_list[[icu_type]] <- bind_rows(results_list[[icu_type]], total_effect_or)
+    
+    # Remove row names and empty p_value columns
+    results_list[[icu_type]] <- results_list[[icu_type]] %>%
+      rownames_to_column(var = "Row") %>%
+      select(-Row) %>%
+      select(-one_of("p_value"))
+  }
+}
+
+# Assign the processed results to individual variables
+icu_a_results <- results_list$icu_a
+icu_b_results <- results_list$icu_b
+icu_c_results <- results_list$icu_c
+icu_d_results <- results_list$icu_d
+icu_e_results <- results_list$icu_e
+icu_f_results <- results_list$icu_f
+icu_g_results <- results_list$icu_g
+```
+
+## Results export
+
+```{r}
+# List of ICU types and corresponding names
+icu_types <- c("Cardiac ICU", "CCU-CTICU", "CSICU+CTICU", "Med-Surg ICU", "MICU", "Neuro ICU", "SICU")
+icu_names <- c("icu_a", "icu_b", "icu_c", "icu_d", "icu_e", "icu_f", "icu_g")
+
+# Create a list of results for each ICU type
+icu_results_list <- list(
+  icu_a = icu_a_results,
+  icu_b = icu_b_results,
+  icu_c = icu_c_results,
+  icu_d = icu_d_results,
+  icu_e = icu_e_results,
+  icu_f = icu_f_results,
+  icu_g = icu_g_results
+)
+
+# Function to save results to a Word document
+save_to_word <- function(data, file_name) {
+  doc <- read_docx()
+  doc <- doc %>%
+    body_add_par("Mediation Analysis ICU Type", style = "heading 1") %>%
+    body_add_table(value = data, style = "table_template")
+  
+  print(doc, target = file_name)
+}
+
+# Iterate over each ICU type and save results to separate Word documents
+for (i in seq_along(icu_names)) {
+  icu_name <- icu_names[i]
+  icu_type <- icu_types[i]
+  
+  if (!is.null(icu_results_list[[icu_name]])) {
+    file_name <- paste0("sup_tables/Mediation Analysis ", icu_type, ".docx")
+    save_to_word(icu_results_list[[icu_name]], file_name)
+  }
+}
+```
+
+# Sup. Table 4B: Mediation tables for Surgery Type
+
+```{r}
+# Load necessary libraries
+
+
+# Define a function to process mediation results
+process_mediation_results <- function(category, elective_status) {
+  df_name <- paste0("mediation_results_cat", category, "_", elective_status, "_sum")
+  df <- get(df_name)
+  df$cat <- category
+  df$results <- stri_replace_all_fixed(rownames(df), '(treated)', "")
+  return(df)
+}
+
+# List of categories
+categories <- c(1, 2, 3, 4, 6, 7, 8)
+
+# Process elective data frames
+mediation_results_elective <- do.call(rbind, lapply(categories, process_mediation_results, elective_status = "elective"))
+
+# Process not elective data frames
+mediation_results_not_elective <- do.call(rbind, lapply(categories, process_mediation_results, elective_status = "not_elective"))
+
+# Remove rownames
+rownames(mediation_results_elective) <- NULL
+rownames(mediation_results_not_elective) <- NULL
+
+# Add total effect (Odds ratio) to the tables
+total_effect_elective <- total_effect_elective %>%
+  mutate(lb = estimated - 1.96 * se, ub = estimated + 1.96 * se) %>%
+  mutate(or = exp(estimated), or.lb = exp(lb), or.ub = exp(ub)) %>%
+  transmute(Estimate = or, '95% CI Upper' = or.ub, '95% CI Lower' = or.lb, cat = 5, 'p-value' = p, results = "Total Effect (OR)")
+
+total_effect_not_elective <- total_effect_not_elective %>%
+  mutate(lb = estimated - 1.96 * se, ub = estimated + 1.96 * se) %>%
+  mutate(or = exp(estimated), or.lb = exp(lb), or.ub = exp(ub)) %>%
+  transmute(Estimate = or, '95% CI Upper' = or.ub, '95% CI Lower' = or.lb, cat = 5, 'p-value' = p, results = "Total Effect (OR)")
+
+# Combine results
+results_overall_elective <- rbind(mediation_results_elective, total_effect_elective)
+results_overall_not_elective <- rbind(mediation_results_not_elective, total_effect_not_elective)
+
+# Remove rownames
+rownames(results_overall_elective) <- NULL
+rownames(results_overall_not_elective) <- NULL
+
+```
+
+## Results export
+
+```{r}
+# Save overall elective and not elective results
+save_to_word(results_overall_elective, "sup_tables/Mediation Analysis Elective Surgery.docx","Mediation Analysis Elective Surgery")
+save_to_word(results_overall_not_elective, "sup_tables/Mediation Analysis Not Elective Surgery.docx","Mediation Analysis Not Elective Surgery")
+
+```

@@ -107,27 +107,38 @@ sodium_cat_8_not_electivesurgery_df <- df_sub_not_electivesurgery %>% filter(sod
 ## Creating subanalises dataframes
 
 ```{r}
-# Subset for Cardiac ICU
-df_sub_cardiac_icu <- subset(selected_df_imputed, unittype == "Cardiac ICU")
+# Subset for each ICU type
+icu_types <- c("Cardiac ICU", "CCU-CTICU", "CSICU+CTICU", "Med-Surg ICU", "MICU", "Neuro ICU", "SICU")
+icu_names <- c("icu_a", "icu_b", "icu_c", "icu_d", "icu_e", "icu_f", "icu_g")
 
-# Subset for CCU-CTICU
-df_sub_ccu_cticu <- subset(selected_df_imputed, unittype == "CCU-CTICU")
-
-# Subset for CSICU+CTICU
-df_sub_csicu_cticu <- subset(selected_df_imputed, unittype == "CSICU+CTICU")
-
-# Subset for Med-Surg ICU
-df_sub_medsurg_icu <- subset(selected_df_imputed, unittype == "Med-Surg ICU")
-
-# Subset for MICU
-df_sub_micu <- subset(selected_df_imputed, unittype == "MICU")
-
-# Subset for Neuro ICU
-df_sub_neuro_icu <- subset(selected_df_imputed, unittype == "Neuro ICU")
-
-# Subset for SICU
-df_sub_sicu <- subset(selected_df_imputed, unittype == "SICU")
+df_list <- list()
+for (i in 1:length(icu_types)) {
+  df_list[[icu_names[i]]] <- subset(selected_df_imputed, unittype == icu_types[i])
+}
 ```
+
+## Creating categorical dataframes for subanalyses
+
+```{r}
+# Convert sodium_cat to numeric
+for (icu in icu_names) {
+  df_list[[icu]]$sodium_cat <- as.numeric(as.character(df_list[[icu]]$sodium_cat))
+}
+
+# Define function to create sodium_cat categories
+create_sodium_cat_df <- function(df, sodium_cat_value) {
+  return(df %>% filter(sodium_cat %in% c(sodium_cat_value, 5)))
+}
+
+# Apply the function to create categories for each ICU
+sodium_cat_values <- c(1, 2, 3, 4, 6, 7, 8)
+for (icu in icu_names) {
+  for (value in sodium_cat_values) {
+    assign(paste0("sodium_cat_", value, "_", icu, "_df"), create_sodium_cat_df(df_list[[icu]], value))
+  }
+}
+```
+
 
 Getting ready the table I use for generating the plots but without generating the plots
 
