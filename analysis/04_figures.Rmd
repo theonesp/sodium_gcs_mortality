@@ -90,7 +90,7 @@ spline_lo <-spline(total_effect$cat, (total_effect$or.lb - 1) * 100, n = 1000)$y
 
 foo_ribbon <-data.frame(spline_x, spline_hi, spline_lo)
 
-p <- ggplot(data = mediation_results_propmediated, aes(x = cat, y = Estimate * 100)) +
+fig3a <- ggplot(data = mediation_results_propmediated, aes(x = cat, y = Estimate * 100)) +
   geom_bar(stat = 'identity', fill = "#27ae60") +
   xlab('Baseline Sodium Category') +
   ylab('%') +
@@ -107,16 +107,8 @@ p <- ggplot(data = mediation_results_propmediated, aes(x = cat, y = Estimate * 1
   scale_y_continuous(position = "right",
                      name = "Proportion of mortality mediated by GCS score",
                      sec.axis = sec_axis(~(. / 100) + 1, name = "Odds ratio (95%CI) of hospital mortality"))
-
-p
-
-
-# Export the ggplot figure as a TIFF image
-tiff("figures/figure3.tiff", width = 2300, height = 1500, res = 300)
-print(p)
-dev.off()
-
 ```
+
 # Figure 3B: Not notsedated by Med Subanalysis
 
 ## Appending results for plot
@@ -184,7 +176,7 @@ spline_lo <-spline(total_effect_notsedated$cat, (total_effect_notsedated$or.lb -
 
 foo_ribbon <-data.frame(spline_x, spline_hi, spline_lo)
 
-supa <- ggplot(data = mediation_results_notsedated_propmediated, aes(x = cat, y = Estimate * 100)) +
+fig3b <- ggplot(data = mediation_results_notsedated_propmediated, aes(x = cat, y = Estimate * 100)) +
   geom_bar(stat = 'identity', fill = "#27ae60") +
   xlab('Baseline Sodium Category') +
   ylab('%') +
@@ -202,11 +194,8 @@ supa <- ggplot(data = mediation_results_notsedated_propmediated, aes(x = cat, y 
                      limits = c(-90, 245),
                      name = "Proportion of mortality mediated by GCS score",
                      sec.axis = sec_axis(~(. / 100) + 1, name = "Odds ratio (95%CI) of hospital mortality")) +
-  labs(caption = "") 
-
-supa
+  labs(caption = "")
 ```
-
 
 # Figure 3C: Sedated by Med Subanalysis
 
@@ -275,7 +264,7 @@ spline_lo <-spline(total_effect_sedated$cat, (total_effect_sedated$or.lb - 1) * 
 
 foo_ribbon <-data.frame(spline_x, spline_hi, spline_lo)
 
-supb <- ggplot(data = mediation_results_sedated_propmediated, aes(x = cat, y = Estimate * 100)) +
+fig3c <- ggplot(data = mediation_results_sedated_propmediated, aes(x = cat, y = Estimate * 100)) +
   geom_bar(stat = 'identity', fill = "#3498db") +
   xlab('Baseline Sodium Category') +
   ylab('%') +
@@ -294,8 +283,6 @@ supb <- ggplot(data = mediation_results_sedated_propmediated, aes(x = cat, y = E
                      name = "Proportion of mortality mediated by GCS score",
                      sec.axis = sec_axis(~(. / 100) + 1, name = "Odds ratio (95%CI) of hospital mortality")) +  
 labs(caption = "")
-
-supb
 ```
 
 
@@ -304,7 +291,12 @@ supb
 ```{r}
 # Assuming plot_supA and plot_supB are already created
 # Arrange the plots side by side
-combined_plot <- plot_grid(supa, supb, labels = c("", ""), ncol = 2)
+combined_plot <- combined_plot <- plot_grid(
+  fig3a, 
+  plot_grid(fig3b, fig3c, ncol = 2), 
+  ncol = 1,
+  rel_heights = c(1, 1)
+)
 
 # Display the combined plot
 print(combined_plot)
@@ -314,120 +306,8 @@ print(combined_plot)
 # Export the ggplot figure as a TIFF image
 
 ```{r}
-tiff("figures/sup_figure.tiff", width = 16*250, height = 9*200, res = 300)
+tiff("figures/figure3.tiff", width = 16*250, height = 2*9*200, res = 300)
 print(combined_plot)
 dev.off()
-```
-
-# Deprecated 
-
-## Prop. Mediated
-
-```{r}
-mediation_results_filtered<-mediation_results_all%>% filter(results %in% c('Prop. Mediated (average)'))
-ggplot(data=mediation_results_filtered,aes(x=cat,y=Estimate,colour=results,fill=results))+
-    geom_point()+
-    geom_line()+
-    geom_errorbar(data=mediation_results_filtered
-                  ,aes(x=cat,ymin=`95% CI Lower`,ymax=`95% CI Upper`,fill=results)
-                  ,alpha=0.3
-                  ,inherit.aes=FALSE
-                  ,width=0.2)+
-    xlab('Baseline Sodium Category')+
-    ylab('Estimate')+
-    #scale_color_manual(labels = c("Male", "Female"), values = c("#1abc9c","#f1c40f"))+
-    #scale_fill_manual(labels = c("Male", "Female"), values = c("#1abc9c","#f1c40f"))+
-    #labs(colour='sex', fill='sex') +
-    theme_minimal()+
-  ggtitle('Proportion Mediated')+
-  scale_x_continuous(breaks = c(1,2,3,4,6,7,8))
-```
-
-## Indirect Effect
-
-```{r}
-mediation_results_filtered<-mediation_results_all%>% filter(results %in% c('ACME (average)'))
-ggplot(data=mediation_results_filtered,aes(x=cat,y=Estimate,colour=results,fill=results))+
-    geom_point()+
-    geom_line()+
-    geom_errorbar(data=mediation_results_filtered
-                  ,aes(x=cat,ymin=`95% CI Lower`,ymax=`95% CI Upper`,fill=results)
-                  ,alpha=0.3
-                  ,inherit.aes=FALSE
-                  ,width=0.2)+
-    xlab('Baseline Sodium Category')+
-    ylab('Estimate')+
-    #scale_color_manual(labels = c("Male", "Female"), values = c("#1abc9c","#f1c40f"))+
-    #scale_fill_manual(labels = c("Male", "Female"), values = c("#1abc9c","#f1c40f"))+
-    #labs(colour='sex', fill='sex') +
-    theme_minimal()+
-  ggtitle('ACME\nAverage Causal Mediation Effects\nIndirect effect of Sodium on mortality that goes through the mediator (GCS)')+
-  scale_x_continuous(breaks = c(1,2,3,4,6,7,8))
-```
-
-## Direct Effect
-
-```{r}
-mediation_results_filtered<-mediation_results_all%>% filter(results %in% c('ADE (average)'))
-ggplot(data=mediation_results_filtered,aes(x=cat,y=Estimate,colour=results,fill=results))+
-    geom_point()+
-    geom_line()+
-    geom_errorbar(data=mediation_results_filtered
-                  ,aes(x=cat,ymin=`95% CI Lower`,ymax=`95% CI Upper`,fill=results)
-                  ,alpha=0.3
-                  ,inherit.aes=FALSE
-                  ,width=0.2)+
-    xlab('Baseline Sodium Category')+
-    ylab('Estimate')+
-    #scale_color_manual(labels = c("Male", "Female"), values = c("#1abc9c","#f1c40f"))+
-    #scale_fill_manual(labels = c("Male", "Female"), values = c("#1abc9c","#f1c40f"))+
-    #labs(colour='sex', fill='sex') +
-    theme_minimal()+
-  ggtitle("Average Direct Effect")+
-  scale_x_continuous(breaks = c(1,2,3,4,6,7,8))
-```
-
-## Total Effect from Mediation Package
-
-```{r}
-mediation_results_filtered<-mediation_results_all%>% filter(results %in% c('Total Effect'))
-ggplot(data=mediation_results_filtered,aes(x=cat,y=Estimate,colour=results,fill=results))+
-    geom_point()+
-    geom_line()+
-    geom_errorbar(data=mediation_results_filtered
-                  ,aes(x=cat,ymin=`95% CI Lower`,ymax=`95% CI Upper`,fill=results)
-                  ,alpha=0.3
-                  ,inherit.aes=FALSE
-                  ,width=0.2)+
-    xlab('Baseline Sodium Category')+
-    ylab('Estimate')+
-    #scale_color_manual(labels = c("Male", "Female"), values = c("#1abc9c","#f1c40f"))+
-    #scale_fill_manual(labels = c("Male", "Female"), values = c("#1abc9c","#f1c40f"))+
-    #labs(colour='sex', fill='sex') +
-    theme_minimal()+
-  ggtitle('Total Effect')+
-  scale_x_continuous(breaks = c(1,2,3,4,6,7,8))
-```
-
-## Total Effect in Odds Ratio
-
-```{r}
-
-ggplot(data=total_effect,aes(x=cat,y=or))+
-    geom_point()+
-    geom_line(aes(color = "red"))+
-    geom_errorbar(data=total_effect
-                  ,aes(x=cat,ymin=or.lb,ymax=or.ub)
-                  ,alpha=0.3
-                  ,inherit.aes=FALSE
-                  ,width=0.2)+
-    xlab('Baseline Sodium Category')+
-    ylab('Estimate')+
-    #scale_color_manual(labels = c("Male", "Female"), values = c("#1abc9c","#f1c40f"))+
-    #scale_fill_manual(labels = c("Male", "Female"), values = c("#1abc9c","#f1c40f"))+
-    #labs(colour='sex', fill='sex') +
-    theme_minimal()+
-  ggtitle('Total Effect')+
-  scale_x_continuous(breaks = c(1,2,3,4,5,6,7,8))
 ```
 
