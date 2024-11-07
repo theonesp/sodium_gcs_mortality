@@ -1,4 +1,4 @@
----
+ ---
 title: "Sodium GCS Mediation Mortality (Analysis)"
 author: "Sicheng, Miguel"
 date: '`r format(Sys.Date(), "%B %d, %Y")`'

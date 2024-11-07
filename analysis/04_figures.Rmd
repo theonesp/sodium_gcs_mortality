@@ -20,16 +20,19 @@ library(dplyr)
 library(ggplot2)
 library(gridExtra)
 library(stringi)
+library(purrr)
+library(cowplot)
 '%!in%' <- function(x,y)!('%in%'(x,y))
 ```
-# Figure 3A: Overall population
+
+# Figure 3A: OVERALL population
 
 ## Appending results for plot
 
--   *ACME:* Average Causal Mediation Effects. This is the indirect effect of the IV on the outcome that goes through the mediator.
--   *ADE:* Average direct effects. It describes the direct effect of the IV on the Outcome.
--   *Total Effect* the Total Effect (direct + indirect) of the IV on the Outcome.
--   *Prop. Mediated* describes the proportion of the effect of the IV on the Outcome that goes through the mediator. It's calculated by dividing the ACME through the total effect.
+  - *ACME:* Average Causal Mediation Effects. This is the indirect effect of the IV on the outcome that goes through the mediator.
+  - *ADE:* Average direct effects. It describes the direct effect of the IV on the Outcome.
+  - *Total Effect* the Total Effect (direct + indirect) of the IV on the Outcome.
+  - *Prop. Mediated* describes the proportion of the effect of the IV on the Outcome that goes through the mediator. It's calculated by dividing the ACME through the total effect.
 
 ```{r}
 # we want to be able to know which dataset our results are coming from
@@ -47,7 +50,8 @@ mediation_results_cat7_sum$cat<-7
 mediation_results_cat7_sum$results<-stri_replace_all_fixed(rownames(mediation_results_cat7_sum),'(treated)',"" )
 mediation_results_cat8_sum$cat<-8
 mediation_results_cat8_sum$results<-stri_replace_all_fixed(rownames(mediation_results_cat8_sum),'(treated)',"" )
-mediation_results_all<-rbind(
+
+mediation_results_all_overall<-rbind(
  mediation_results_cat1_sum
 ,mediation_results_cat2_sum
 ,mediation_results_cat3_sum
@@ -56,20 +60,39 @@ mediation_results_all<-rbind(
 ,mediation_results_cat7_sum
 ,mediation_results_cat8_sum
 )
-rownames(mediation_results_all)<-NULL
+rownames(mediation_results_all_overall)<-NULL
 
 #add total effect (Odds ratio) to the table
 
-total_effect<-rbind(total_effect,data.frame(cat = 5,estimated = 0,se = 0,p = NA))
+total_effect_forplot_overall<-rbind(total_effect, data.frame(cat = 5,estimated = 0,se = 0,p = NA))
 
-total_effect<-total_effect%>%
-  mutate(lb = estimated -1.96*se, ub = estimated + 1.96*se)%>%
-  mutate(or = exp(estimated),or.lb = exp(lb),or.ub = exp(ub))
+total_effect_forplot_overall<-total_effect_forplot_overall%>%
+  mutate(lb = estimated -1.96*se,
+         ub = estimated + 1.96*se,
+         or = exp(estimated),
+         or.lb = exp(lb),
+         or.ub = exp(ub))
 
-total_effect_copy<-total_effect%>%transmute(Estimate = or, '95% CI Upper' = or.ub,'95% CI Lower' = or.lb,cat = cat,'p-value' = p,results = "Total Effect (OR)")
+total_effect_overall_copy<-total_effect_forplot_overall%>%
+  transmute(Estimate = or, 
+            '95% CI Upper' = or.ub,
+            '95% CI Lower' = or.lb,
+            cat = cat,'p-value' = p,
+            results = "Total Effect (OR)")
 
-results_overall<-rbind(mediation_results_all,total_effect_copy)
+results_overall<-rbind(mediation_results_all_overall,total_effect_overall_copy)
 ```
+
+## Exporing results for suplementary table
+
+```{r}
+table_results_overall<-results_overall %>%
+  filter(results == "Total Effect (OR)") %>%
+  mutate(across(where(is.numeric), ~ round(., 2)))
+
+table_results_overall$`p-value`<-NULL
+```
+
 
 ## Final subfigure: Prop. Mediated + Total Effect
 
@@ -77,31 +100,31 @@ results_overall<-rbind(mediation_results_all,total_effect_copy)
 caption = Green Bars: Proportion of mortality mediated by GCS score\nBlue Dots: Odds Ratio of Hospital Mortality\nBlue Ribbon: Odds ratio's 95% CI
 
 ```{r }
-mediation_results_propmediated<-mediation_results_all%>%
+mediation_results_overall_propmediated<-mediation_results_all_overall%>%
   filter(results %in% c("Prop. Mediated (average)") ) %>%
   dplyr::select(Estimate,cat,results)
 
-mediation_results_propmediated<-rbind(mediation_results_propmediated,
+mediation_results_overall_propmediated<-rbind(mediation_results_overall_propmediated,
                                       data.frame(Estimate = 0, cat = 5, results = "Prop. Mediated (average)"))
 
-spline_x <-spline(total_effect$cat, (total_effect$or - 1) * 100, n = 1000)$x
-spline_hi <-spline(total_effect$cat, (total_effect$or.ub - 1) * 100, n = 1000)$y
-spline_lo <-spline(total_effect$cat, (total_effect$or.lb - 1) * 100, n = 1000)$y
+spline_x <-spline(total_effect_forplot_overall$cat, (total_effect_forplot_overall$or - 1) * 100, n = 1000)$x
+spline_hi <-spline(total_effect_forplot_overall$cat, (total_effect_forplot_overall$or.ub - 1) * 100, n = 1000)$y
+spline_lo <-spline(total_effect_forplot_overall$cat, (total_effect_forplot_overall$or.lb - 1) * 100, n = 1000)$y
 
 foo_ribbon <-data.frame(spline_x, spline_hi, spline_lo)
 
-fig3a <- ggplot(data = mediation_results_propmediated, aes(x = cat, y = Estimate * 100)) +
+fig3a <- ggplot(data = mediation_results_overall_propmediated, aes(x = cat, y = Estimate * 100)) +
   geom_bar(stat = 'identity', fill = "#27ae60") +
   xlab('Baseline Sodium Category') +
   ylab('%') +
-  geom_text(data = mediation_results_propmediated, aes(label = paste(round(Estimate * 100, 2), '%')), colour = "#2c3e50", vjust = 1.5) +
+  geom_text(data = mediation_results_overall_propmediated, aes(label = paste(round(Estimate * 100, 2), '%')), colour = "#2c3e50", vjust = 1.5) +
   scale_y_continuous(breaks = c(0, 50, 100)) +
   theme(legend.position = "bottom", plot.title.position = "plot", plot.caption.position =  "plot") +
   theme_minimal() +
   scale_x_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7, 8),
                      labels = c("<120", "120- <125", "125- <130", "130- <135", "135- <140\n(Reference)", "140- <145", "145- <150", ">150")) +
-  geom_point(data = total_effect, aes(x = cat, y = (or - 1) * 100), colour = "#34495e") +
-  geom_smooth(data = total_effect, aes(x = cat, y = (or - 1) * 100), method = "loess", span = 0.5, se = FALSE, colour = "#34495e") +
+  geom_point(data = total_effect_forplot_overall, aes(x = cat, y = (or - 1) * 100), colour = "#34495e") +
+  geom_smooth(data = total_effect_forplot_overall, aes(x = cat, y = (or - 1) * 100), method = "loess", span = 0.5, se = FALSE, colour = "#34495e") +
   geom_ribbon(data = foo_ribbon, aes(x = spline_x, y = NULL, ymin = spline_lo, ymax = spline_hi),
               alpha = 0.4, inherit.aes = FALSE, width = 0.2, fill = '#2980b9') +
   scale_y_continuous(position = "right",
@@ -109,85 +132,89 @@ fig3a <- ggplot(data = mediation_results_propmediated, aes(x = cat, y = Estimate
                      sec.axis = sec_axis(~(. / 100) + 1, name = "Odds ratio (95%CI) of hospital mortality"))
 ```
 
-# Figure 3B: Not notsedated by Med Subanalysis
+# Figure 3B: NOT MECHANICALLY VENTILATED Subanalysis
 
 ## Appending results for plot
 
--   *ACME:* Average Causal Mediation Effects. This is the indirect effect of the IV on the outcome that goes through the mediator.
--   *ADE:* Average direct effects. It describes the direct effect of the IV on the Outcome.
--   *Total Effect* the Total Effect (direct + indirect) of the IV on the Outcome.
--   *Prop. Mediated* describes the proportion of the effect of the IV on the Outcome that goes through the mediator. It's calculated by dividing the ACME through the total effect.
-
 ```{r}
-# we want to be able to know which dataset our results are coming from
-mediation_results_cat1_notsedated_sum$cat<-1
-mediation_results_cat1_notsedated_sum$results<-stri_replace_all_fixed(rownames(mediation_results_cat1_notsedated_sum),'(treated)',"" )
-mediation_results_cat2_notsedated_sum$cat<-2
-mediation_results_cat2_notsedated_sum$results<-stri_replace_all_fixed(rownames(mediation_results_cat2_notsedated_sum),'(treated)',"" )
-mediation_results_cat3_notsedated_sum$cat<-3
-mediation_results_cat3_notsedated_sum$results<-stri_replace_all_fixed(rownames(mediation_results_cat3_notsedated_sum),'(treated)',"" )
-mediation_results_cat4_notsedated_sum$cat<-4
-mediation_results_cat4_notsedated_sum$results<-stri_replace_all_fixed(rownames(mediation_results_cat4_notsedated_sum),'(treated)',"" )
-mediation_results_cat6_notsedated_sum$cat<-6
-mediation_results_cat6_notsedated_sum$results<-stri_replace_all_fixed(rownames(mediation_results_cat6_notsedated_sum),'(treated)',"" )
-mediation_results_cat7_notsedated_sum$cat<-7
-mediation_results_cat7_notsedated_sum$results<-stri_replace_all_fixed(rownames(mediation_results_cat7_notsedated_sum),'(treated)',"" )
-mediation_results_cat8_notsedated_sum$cat<-8
-mediation_results_cat8_notsedated_sum$results<-stri_replace_all_fixed(rownames(mediation_results_cat8_notsedated_sum),'(treated)',"" )
-mediation_results_all_notsedated<-rbind(
- mediation_results_cat1_notsedated_sum
-,mediation_results_cat2_notsedated_sum
-,mediation_results_cat3_notsedated_sum
-,mediation_results_cat4_notsedated_sum
-,mediation_results_cat6_notsedated_sum
-,mediation_results_cat7_notsedated_sum
-,mediation_results_cat8_notsedated_sum
-)
+# Convertir la lista en un dataframe
+mediation_results_all_not_mechvent <- map_df(seq_along(mediation_summaries_not_mechvent), function(i) {
+  if (is.null(mediation_summaries_not_mechvent[[i]])) {
+    return(NULL)
+  }
+  df <- as.data.frame(mediation_summaries_not_mechvent[[i]])
+  df$cat <- i  # Asignar el número de la categoría a cada fila
+  return(df)
+})
 
-rownames(mediation_results_all_notsedated)<-NULL
+
+
+# Agregar la columna de resultados basados en los nombres de las filas originales
+mediation_results_all_not_mechvent <- mediation_results_all_not_mechvent %>%
+  mutate(results = case_when(
+    row_number() %% 4 == 1 ~ "Total Effect",
+    row_number() %% 4 == 2 ~ "ACME (average)",
+    row_number() %% 4 == 3 ~ "ADE (average)",
+    row_number() %% 4 == 0 ~ "Prop. Mediated (average)"
+  ))
 
 #add total effect (Odds ratio) to the table
 
-total_effect_notsedated<-rbind(total_effect_notsedated,data.frame(cat = 5,estimated = 0,se = 0,p = NA))
+total_effect_forplot_not_mechvent<-rbind(total_effect_not_mechvent,data.frame(cat = 5,estimated = 0,se = 0,p = NA))
 
-total_effect_notsedated<-total_effect_notsedated%>%
-  mutate(lb = estimated -1.96*se, ub = estimated + 1.96*se)%>%
-  mutate(or = exp(estimated),or.lb = exp(lb),or.ub = exp(ub))
+total_effect_forplot_not_mechvent <- total_effect_forplot_not_mechvent %>%
+  mutate(lb = estimated - 1.96 * se, 
+         ub = estimated + 1.96 * se,
+         or = exp(estimated), 
+         or.lb = exp(lb), 
+         or.ub = exp(ub))
 
-total_effect_notsedated_copy<-total_effect_notsedated%>%transmute(Estimate = or, '95% CI Upper' = or.ub,'95% CI Lower' = or.lb,cat = cat,'p-value' = p,results = "Total Effect (OR)")
+# Crear una copia con las transformaciones específicas
+total_effect_forplot_not_mechvent_copy <- total_effect_forplot_not_mechvent %>%
+  transmute(Estimate = or, 
+            '95% CI Upper' = or.ub, 
+            '95% CI Lower' = or.lb, 
+            cat = cat, 
+            'p-value' = p, 
+            results = "Total Effect (OR)")
 
-results_overall_notsedated<-rbind(mediation_results_all_notsedated,total_effect_notsedated_copy)
+results_not_mechvent<-rbind(mediation_results_all_not_mechvent,total_effect_forplot_not_mechvent_copy)
+
+rownames(results_not_mechvent)<-c()
 ```
-
 
 ## Final subfigure: Prop. Mediated + Total Effect
 
-```{r }
-mediation_results_notsedated_propmediated<-mediation_results_all_notsedated%>%
-  filter(results %in% c("Prop. Mediated (average)") ) %>%
-  dplyr::select(Estimate,cat,results)
+```{r}
+# Filter and select relevant data for Prop. Mediated (average)
+mediation_results_not_mechvent_propmediated <- results_not_mechvent %>%
+  filter(results %in% c("Prop. Mediated (average)")) %>%
+  dplyr::select(Estimate, cat, results)
 
-mediation_results_notsedated_propmediated<-rbind(mediation_results_notsedated_propmediated,
-                                      data.frame(Estimate = 0, cat = 5, results = "Prop. Mediated (average)"))
+# Add a dummy data point for category 5 with an Estimate of 0
+mediation_results_not_mechvent_propmediated <- rbind(
+  mediation_results_not_mechvent_propmediated,
+  data.frame(Estimate = 0, cat = 5, results = "Prop. Mediated (average)"))
 
-spline_x <-spline(total_effect_notsedated$cat, (total_effect_notsedated$or - 1) * 100, n = 1000)$x
-spline_hi <-spline(total_effect_notsedated$cat, (total_effect_notsedated$or.ub - 1) * 100, n = 1000)$y
-spline_lo <-spline(total_effect_notsedated$cat, (total_effect_notsedated$or.lb - 1) * 100, n = 1000)$y
+spline_x <- spline(total_effect_forplot_not_mechvent$cat, (total_effect_forplot_not_mechvent$or - 1) * 100, n = 1000)$x
+spline_hi <- spline(total_effect_forplot_not_mechvent$cat, (total_effect_forplot_not_mechvent$or.ub - 1) * 100, n = 1000)$y
+spline_lo <- spline(total_effect_forplot_not_mechvent$cat, (total_effect_forplot_not_mechvent$or.lb - 1) * 100, n = 1000)$y
 
-foo_ribbon <-data.frame(spline_x, spline_hi, spline_lo)
+foo_ribbon <- data.frame(spline_x, spline_hi, spline_lo)
 
-fig3b <- ggplot(data = mediation_results_notsedated_propmediated, aes(x = cat, y = Estimate * 100)) +
+# Plotting the results
+fig3b <- ggplot(data = mediation_results_not_mechvent_propmediated, aes(x = cat, y = Estimate * 100)) +
   geom_bar(stat = 'identity', fill = "#27ae60") +
   xlab('Baseline Sodium Category') +
   ylab('%') +
-  geom_text(data = mediation_results_notsedated_propmediated, aes(label = paste(round(Estimate * 100, 2), '%')), colour = "#2c3e50", vjust = 1.5) +
+  geom_text(data = mediation_results_not_mechvent_propmediated, aes(label = paste(round(Estimate * 100, 2), '%')), colour = "#2c3e50", vjust = 1.5) +
   scale_y_continuous(breaks = c(0, 50, 100)) +
-  theme(legend.position = "bottom", plot.title.position = "plot", plot.caption.position =  "plot") +
+  theme(legend.position = "bottom", plot.title.position = "plot", plot.caption.position = "plot") +
   theme_minimal() +
   scale_x_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7, 8),
                      labels = c("<120", "120- <125", "125- <130", "130- <135", "135- <140\n(Reference)", "140- <145", "145- <150", ">150")) +
-  geom_point(data = total_effect_notsedated, aes(x = cat, y = (or - 1) * 100), colour = "#34495e") +
-  geom_smooth(data = total_effect_notsedated, aes(x = cat, y = (or - 1) * 100), method = "loess", span = 0.5, se = FALSE, colour = "#34495e") +
+  geom_point(data = total_effect_forplot_not_mechvent, aes(x = cat, y = (or - 1) * 100), colour = "#34495e") +
+  geom_smooth(data = total_effect_forplot_not_mechvent, aes(x = cat, y = (or - 1) * 100), method = "loess", span = 0.5, se = FALSE, colour = "#34495e") +
   geom_ribbon(data = foo_ribbon, aes(x = spline_x, y = NULL, ymin = spline_lo, ymax = spline_hi),
               alpha = 0.4, inherit.aes = FALSE, width = 0.2, fill = '#2980b9') +
   scale_y_continuous(position = "right", 
@@ -197,96 +224,97 @@ fig3b <- ggplot(data = mediation_results_notsedated_propmediated, aes(x = cat, y
   labs(caption = "")
 ```
 
-# Figure 3C: Sedated by Med Subanalysis
+# Figure 3C: MECHANICALLY VENTILATED Subanalysis
 
 ## Appending results for plot
 
--   *ACME:* Average Causal Mediation Effects. This is the indirect effect of the IV on the outcome that goes through the mediator.
--   *ADE:* Average direct effects. It describes the direct effect of the IV on the Outcome.
--   *Total Effect* the Total Effect (direct + indirect) of the IV on the Outcome.
--   *Prop. Mediated* describes the proportion of the effect of the IV on the Outcome that goes through the mediator. It's calculated by dividing the ACME through the total effect.
-
 ```{r}
-# we want to be able to know which dataset our results are coming from
-mediation_results_cat1_sedated_sum$cat<-1
-mediation_results_cat1_sedated_sum$results<-stri_replace_all_fixed(rownames(mediation_results_cat1_sedated_sum),'(treated)',"" )
-mediation_results_cat2_sedated_sum$cat<-2
-mediation_results_cat2_sedated_sum$results<-stri_replace_all_fixed(rownames(mediation_results_cat2_sedated_sum),'(treated)',"" )
-mediation_results_cat3_sedated_sum$cat<-3
-mediation_results_cat3_sedated_sum$results<-stri_replace_all_fixed(rownames(mediation_results_cat3_sedated_sum),'(treated)',"" )
-mediation_results_cat4_sedated_sum$cat<-4
-mediation_results_cat4_sedated_sum$results<-stri_replace_all_fixed(rownames(mediation_results_cat4_sedated_sum),'(treated)',"" )
-mediation_results_cat6_sedated_sum$cat<-6
-mediation_results_cat6_sedated_sum$results<-stri_replace_all_fixed(rownames(mediation_results_cat6_sedated_sum),'(treated)',"" )
-mediation_results_cat7_sedated_sum$cat<-7
-mediation_results_cat7_sedated_sum$results<-stri_replace_all_fixed(rownames(mediation_results_cat7_sedated_sum),'(treated)',"" )
-mediation_results_cat8_sedated_sum$cat<-8
-mediation_results_cat8_sedated_sum$results<-stri_replace_all_fixed(rownames(mediation_results_cat8_sedated_sum),'(treated)',"" )
-mediation_results_all_sedated<-rbind(
- mediation_results_cat1_sedated_sum
-,mediation_results_cat2_sedated_sum
-,mediation_results_cat3_sedated_sum
-,mediation_results_cat4_sedated_sum
-,mediation_results_cat6_sedated_sum
-,mediation_results_cat7_sedated_sum
-,mediation_results_cat8_sedated_sum
-)
+# Convertir la lista en un dataframe
+mediation_results_all_mechvent <- map_df(seq_along(mediation_summaries_mechvent), function(i) {
+  if (is.null(mediation_summaries_mechvent[[i]])) {
+    return(NULL)
+  }
+  df <- as.data.frame(mediation_summaries_mechvent[[i]])
+  df$cat <- i  # Asignar el número de la categoría a cada fila
+  return(df)
+})
 
-rownames(mediation_results_all_sedated)<-NULL
+# Agregar la columna de resultados basados en los nombres de las filas originales
+mediation_results_all_mechvent <- mediation_results_all_mechvent %>%
+  mutate(results = case_when(
+    row_number() %% 4 == 1 ~ "Total Effect",
+    row_number() %% 4 == 2 ~ "ACME (average)",
+    row_number() %% 4 == 3 ~ "ADE (average)",
+    row_number() %% 4 == 0 ~ "Prop. Mediated (average)"
+  ))
 
 #add total effect (Odds ratio) to the table
 
-total_effect_sedated<-rbind(total_effect_sedated,data.frame(cat = 5,estimated = 0,se = 0,p = NA))
+total_effect_forplot_mechvent<-rbind(total_effect_mechvent,data.frame(cat = 5,estimated = 0,se = 0,p = NA))
 
-total_effect_sedated<-total_effect_sedated%>%
-  mutate(lb = estimated -1.96*se, ub = estimated + 1.96*se)%>%
-  mutate(or = exp(estimated),or.lb = exp(lb),or.ub = exp(ub))
+total_effect_forplot_mechvent <- total_effect_forplot_mechvent %>%
+  mutate(lb = estimated - 1.96 * se, 
+         ub = estimated + 1.96 * se,
+         or = exp(estimated), 
+         or.lb = exp(lb), 
+         or.ub = exp(ub))
 
-total_effect_sedated_copy<-total_effect_sedated%>%transmute(Estimate = or, '95% CI Upper' = or.ub,'95% CI Lower' = or.lb,cat = cat,'p-value' = p,results = "Total Effect (OR)")
+# Crear una copia con las transformaciones específicas
+total_effect_forplot_mechvent_copy <- total_effect_forplot_mechvent %>%
+  transmute(Estimate = or, 
+            '95% CI Upper' = or.ub, 
+            '95% CI Lower' = or.lb, 
+            cat = cat, 
+            'p-value' = p, 
+            results = "Total Effect (OR)")
 
-results_overall_sedated<-rbind(mediation_results_all_sedated,total_effect_sedated_copy)
+results_mechvent<-rbind(mediation_results_all_mechvent,total_effect_forplot_mechvent_copy)
+
+rownames(results_mechvent)<-c()
 ```
-
 
 ## Final subfigure: Prop. Mediated + Total Effect
 
-```{r }
-mediation_results_sedated_propmediated<-mediation_results_all_sedated%>%
-  filter(results %in% c("Prop. Mediated (average)") ) %>%
-  dplyr::select(Estimate,cat,results)
+```{r}
+# Filter and select relevant data for Prop. Mediated (average)
+mediation_results_mechvent_propmediated <- results_mechvent %>%
+  filter(results %in% c("Prop. Mediated (average)")) %>%
+  dplyr::select(Estimate, cat, results)
 
-mediation_results_sedated_propmediated<-rbind(mediation_results_sedated_propmediated,
-                                      data.frame(Estimate = 0, cat = 5, results = "Prop. Mediated (average)"))
+# Add a dummy data point for category 5 with an Estimate of 0
+mediation_results_mechvent_propmediated <- rbind(
+  mediation_results_mechvent_propmediated,
+  data.frame(Estimate = 0, cat = 5, results = "Prop. Mediated (average)"))
 
-spline_x <-spline(total_effect_sedated$cat, (total_effect_sedated$or - 1) * 100, n = 1000)$x
-spline_hi <-spline(total_effect_sedated$cat, (total_effect_sedated$or.ub - 1) * 100, n = 1000)$y
-spline_lo <-spline(total_effect_sedated$cat, (total_effect_sedated$or.lb - 1) * 100, n = 1000)$y
+spline_x <- spline(total_effect_forplot_mechvent$cat, (total_effect_forplot_mechvent$or - 1) * 100, n = 1000)$x
+spline_hi <- spline(total_effect_forplot_mechvent$cat, (total_effect_forplot_mechvent$or.ub - 1) * 100, n = 1000)$y
+spline_lo <- spline(total_effect_forplot_mechvent$cat, (total_effect_forplot_mechvent$or.lb - 1) * 100, n = 1000)$y
 
-foo_ribbon <-data.frame(spline_x, spline_hi, spline_lo)
+foo_ribbon <- data.frame(spline_x, spline_hi, spline_lo)
 
-fig3c <- ggplot(data = mediation_results_sedated_propmediated, aes(x = cat, y = Estimate * 100)) +
+# Plotting the results
+fig3c <- ggplot(data = mediation_results_mechvent_propmediated, aes(x = cat, y = Estimate * 100)) +
   geom_bar(stat = 'identity', fill = "#3498db") +
   xlab('Baseline Sodium Category') +
   ylab('%') +
-  geom_text(data = mediation_results_sedated_propmediated, aes(label = paste(round(Estimate * 100, 2), '%')), colour = "#2c3e50", vjust = 1.5) +
+  geom_text(data = mediation_results_mechvent_propmediated, aes(label = paste(round(Estimate * 100, 2), '%')), colour = "#2c3e50", vjust = 1.5) +
   scale_y_continuous(breaks = c(0, 50, 100)) +
-  theme(legend.position = "bottom", plot.title.position = "plot", plot.caption.position =  "plot") +
+  theme(legend.position = "bottom", plot.title.position = "plot", plot.caption.position = "plot") +
   theme_minimal() +
   scale_x_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7, 8),
                      labels = c("<120", "120- <125", "125- <130", "130- <135", "135- <140\n(Reference)", "140- <145", "145- <150", ">150")) +
-  geom_point(data = total_effect_sedated, aes(x = cat, y = (or - 1) * 100), colour = "#c0392b") +
-  geom_smooth(data = total_effect_sedated, aes(x = cat, y = (or - 1) * 100), method = "loess", span = 0.5, se = FALSE, colour = "#c0392b") +
+  geom_point(data = total_effect_forplot_mechvent, aes(x = cat, y = (or - 1) * 100), colour = "#c0392b") +
+  geom_smooth(data = total_effect_forplot_mechvent, aes(x = cat, y = (or - 1) * 100), method = "loess", span = 0.5, se = FALSE, colour = "#c0392b") +
   geom_ribbon(data = foo_ribbon, aes(x = spline_x, y = NULL, ymin = spline_lo, ymax = spline_hi),
               alpha = 0.4, inherit.aes = FALSE, width = 0.2, fill = '#e74c3c') +
   scale_y_continuous(position = "right", 
                      limits = c(-90, 245),
                      name = "Proportion of mortality mediated by GCS score",
-                     sec.axis = sec_axis(~(. / 100) + 1, name = "Odds ratio (95%CI) of hospital mortality")) +  
-labs(caption = "")
+                     sec.axis = sec_axis(~(. / 100) + 1, name = "Odds ratio (95%CI) of hospital mortality")) +
+  labs(caption = "")
 ```
 
-
-# Combining
+# Combining all subfigures
 
 ```{r}
 # Assuming plot_supA and plot_supB are already created
@@ -295,7 +323,7 @@ combined_plot <- combined_plot <- plot_grid(
   fig3a, 
   plot_grid(fig3b, fig3c, ncol = 2), 
   ncol = 1,
-  rel_heights = c(1, 1)
+  rel_heights = c(1, 2)
 )
 
 # Display the combined plot

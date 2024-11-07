@@ -139,11 +139,43 @@ for (icu in icu_names) {
 }
 ```
 
+# Subanalysis 4, Mechanically ventilated
 
-Getting ready the table I use for generating the plots but without generating the plots
+## Creating subanalises dataframes
 
-The mediation estimate.
-The total effect OR.
-The total effect OR confidence interval.
-Maybe also P value?
-Columns: or    or.lb    or.u , p, Prop. Mediated (average)
+```{r}
+df_sub_mechvent <- selected_df_imputed %>% filter(mechvent_day01 == 1)
+df_sub_not_mechvent <- selected_df_imputed %>% filter(mechvent_day01 == 0)
+```
+
+## Creating categorical dataframes for subanalyses
+
+### Mechanically Ventilated Group
+
+```{r}
+df_sub_mechvent$sodium_cat <- as.numeric(as.character(df_sub_mechvent$sodium_cat))
+
+sodium_cat_1_mechvent_df <- df_sub_mechvent %>% filter(sodium_cat %in% c(1, 5))
+sodium_cat_2_mechvent_df <- df_sub_mechvent %>% filter(sodium_cat %in% c(2, 5))
+sodium_cat_3_mechvent_df <- df_sub_mechvent %>% filter(sodium_cat %in% c(3, 5))
+sodium_cat_4_mechvent_df <- df_sub_mechvent %>% filter(sodium_cat %in% c(4, 5))
+sodium_cat_6_mechvent_df <- df_sub_mechvent %>% filter(sodium_cat %in% c(6, 5))
+sodium_cat_7_mechvent_df <- df_sub_mechvent %>% filter(sodium_cat %in% c(7, 5))
+sodium_cat_8_mechvent_df <- df_sub_mechvent %>% filter(sodium_cat %in% c(8, 5))
+```
+
+### Non-Mechanically Ventilated Group
+
+```{r}
+df_sub_not_mechvent$sodium_cat <- as.numeric(as.character(df_sub_not_mechvent$sodium_cat))
+
+sodium_cat_1_not_mechvent_df <- df_sub_not_mechvent %>% filter(sodium_cat %in% c(1, 5))
+sodium_cat_2_not_mechvent_df <- df_sub_not_mechvent %>% filter(sodium_cat %in% c(2, 5))
+sodium_cat_3_not_mechvent_df <- df_sub_not_mechvent %>% filter(sodium_cat %in% c(3, 5))
+sodium_cat_4_not_mechvent_df <- df_sub_not_mechvent %>% filter(sodium_cat %in% c(4, 5))
+sodium_cat_6_not_mechvent_df <- df_sub_not_mechvent %>% filter(sodium_cat %in% c(6, 5))
+sodium_cat_7_not_mechvent_df <- df_sub_not_mechvent %>% filter(sodium_cat %in% c(7, 5))
+sodium_cat_8_not_mechvent_df <- df_sub_not_mechvent %>% filter(sodium_cat %in% c(8, 5))
+```
+
+

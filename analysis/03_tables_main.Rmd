@@ -9,9 +9,32 @@ title: "03_tables_creation"
 library(tableone)
 library(magrittr)
 library(dplyr)
-library(sqldf)
-library(summarytools)
-library(kableExtra)
+library(openxlsx)
+library(officer)
+library(flextable)
+library(tibble)
+library(survival)
+library(stringr)
+library(forcats)
+
+
+# Function to convert a dataframe to a flextable
+tableone2flextable <- function(tableone, starification_cats){
+  # Add the header row
+  colnames(tableone)[3:(3+length(starification_cats)-1)] <- paste('Sodium Band Category', starification_cats)
+  
+  # Create flextable
+  flex <- flextable(tableone)
+  return(flex)
+}
+
+# Function to export a flextable to a Word document
+flextable2word <- function(flextab, output_path){
+  ft <- autofit(theme_zebra(flextab))
+  doc <- read_docx() %>%
+    body_add_flextable(ft)
+  print(doc, target = output_path)
+}
 ```
 
 ## Table 1
@@ -19,13 +42,14 @@ library(kableExtra)
 All variables.  Stratification (ie column groupings) should be by sodium categories.
 
 ```{r,echo = F}
+dataframe_for_table1<-selected_df_imputed
 
 # we are re-difining the 'Others' category
 dataframe_for_table1$unittype<-plyr::revalue(
   dataframe_for_table1$unittype,c( 'Neuro ICU'='Others' , 'SICU'= 'Others', 'Cardiac ICU'='Others' , 'CCU-CTICU'='Others'  ,'CSICU'='Others' , 'CTICU'='Others')
 )
 
-vars_in_table1<-c("age", "gender", "AP_grp", "ethnicity", "apachescore", "mechvent_day01", "unittype", "charlson_chf1", "charlson_liver1", "creatinine", "creatinine_great2", "gcs_baseline", "normal_gcs", "hosp_mortality","sodium_cat","adm_source","sedation_score")
+vars_in_table1<-c("age", "gender", "AP_grp", "ethnicity", "apachescore", "mechvent_day01", "unittype", "charlson_chf1", "charlson_liver1", "creatinine", "creatinine_great2", "gcs_baseline", "normal_gcs", "hosp_mortality","sodium_cat","adm_source","sedation_status")
 # lists the variables we are going to be including in table1 (excepts for the stratification variable)
 
 dataframe_for_table1<-dataframe_for_table1[,vars_in_table1]
@@ -49,7 +73,7 @@ label(dataframe_for_table1$normal_gcs) <- 'Normal Glasgow Coma Scale'
 label(dataframe_for_table1$hosp_mortality) <- 'Hospital Mortality'
 label(dataframe_for_table1$sodium_cat) <- 'Sodium Category'
 label(dataframe_for_table1$adm_source) <- 'Admission Source'
-label(dataframe_for_table1$sedation_score) <- 'Sedation Score'
+label(dataframe_for_table1$sedation_status) <- 'Sedation Status'
 # selects variable to stratify by and label is useful for prettyfying variable names we want to appear on table 1
 
 # detects whether a variable is categorical or not based on the number of distinct variables per category (10 is the threshold)
@@ -64,27 +88,52 @@ for (i in 1:length(vars_in_table1) ) {
   }
 }  
 cat_variables<-cat_variables[!is.na(cat_variables)]
-table1_base<-print(CreateTableOne(vars = vars_in_table1
-                                   ,strata = stratifyby
+table1_base<-print(CreateTableOne(  vars = vars_in_table1
+                                  , strata = stratifyby
                                   , factorVars = cat_variables
-    ,data = dataframe_for_table1, addOverall=T),varLabels = T ,nonnormal  = c('creatinine','gcs_baseline')
+                                  , data = dataframe_for_table1
+                                  
+                                  , addOverall=T), export.word = T,varLabels = T ,nonnormal  = c('creatinine','gcs_baseline')
 )
 
-
-# run this in console for html output, the code below uses library kableExtra::
-# the line add_header_above() will need to be modified depending on the number of columns of the table
 starification_cats<-n_distinct(dataframe_for_table1[,stratifyby])
-table1_base %>%
-  kbl(caption = "Table 1 of base model" , align = "c") %>%
-  kable_classic_2(full_width = F, html_font = "Cambria")%>%
-  add_header_above(c(" "," ", 'Sodium Band Category' = starification_cats," ", "" ))
+```
 
+### Export
+
+```{r}
+table1_base<-as.data.frame(table1_base)
+
+# Assume your data frame is named df
+# Convert row names to a column
+table1_base <- table1_base %>% 
+  rownames_to_column(var = "RowNames")
+
+# # Create the flextable with the modified dataframe
+# table1_flextable <- flextable(table1_base) %>%
+#   fontsize(size = 6, part = "all")
+
+table1_flextable <- flextable(table1_base) %>%
+  fontsize(size = 6, part = "all") %>%
+  set_table_properties(width = .95, layout = "autofit") %>% # Adjust the table width
+  border_outer(border = fp_border(color = "black", width = 1)) %>%
+  border_inner(border = fp_border(color = "black", width = 1)) %>%
+  border(border = fp_border(color = "black", width = 1))
+
+# Create a new Word document
+doc <- read_docx()
+
+# Add the flextable to the document
+doc <- body_add_flextable(doc, value = table1_flextable)
+
+# Save the document
+print(doc, target = "tables/table1.docx")
 ```
 
 ## Supplemental Table 1
 
 ```{r}
-dataframe_for_sup_table1<-selected_df_imputed
+dataframe_for_sup_table1 <- selected_df_imputed
 
 
 vars_in_sup_table1 <- c("MAP", "temperature", "heartrate", "respiratoryrate", "day1fio2", "day1pao2", "pco2", "ph", "urine", "albumin", "bilirubin", "wbc", "cirrhosis", "aids", "leukemia", "immunosuppression","sodium_cat")
@@ -141,67 +190,43 @@ sup_table1_base<-print(CreateTableOne(vars = vars_in_sup_table1
 
 # run this in console for html output, the code below uses library kableExtra::
 # the line add_header_above() will need to be modified depending on the number of columns of the table
-starification_cats<-n_distinct(dataframe_for_sup_table1[,stratifyby])
-sup_table1_base %>%
-  kbl(caption = "Sup Table 1" , align = "c") %>%
-  kable_classic_2(full_width = F, html_font = "Cambria")%>%
-  add_header_above(c(" "," ", 'SOFA day1 Category' = starification_cats," ", ""))
+
 ```
 
+### Export
 
 ```{r}
-# Define the data frame and variables
-dataframe_for_sup_table1 <- selected_df_imputed
-vars_in_sup_table1 <- c("MAP", "temperature", "heartrate", "respiratoryrate", "day1fio2", "day1pao2", "pco2", "ph", "urine", "albumin", "bilirubin", "wbc", "cirrhosis", "aids", "leukemia", "immunosuppression", "sodium_cat")
-cat_variables <- c("cirrhosis", "aids", "leukemia", "immunosuppression", "sodium_cat")  # Categorical variables
-stratifyby <- "sodium_cat"
+sup_table1_base<-as.data.frame(sup_table1_base)
 
-# Set variable labels
-variable_labels <- c(
-  "MAP" = "Mean Arterial Pressure",
-  "temperature" = "Temperature",
-  "heartrate" = "Heart Rate",
-  "respiratoryrate" = "Respiratory Rate",
-  "day1fio2" = "FiO2 on Day 1",
-  "day1pao2" = "PaO2 on Day 1",
-  "pco2" = "PCO2",
-  "ph" = "pH",
-  "urine" = "Urine Output",
-  "albumin" = "Albumin",
-  "bilirubin" = "Bilirubin",
-  "wbc" = "White Blood Cell Count",
-  "cirrhosis" = "Cirrhosis",
-  "aids" = "AIDS",
-  "leukemia" = "Leukemia",
-  "immunosuppression" = "Immunosuppression"
-)
+# Assume your data frame is named df
+# Convert row names to a column
+sup_table1_base <- sup_table1_base %>% 
+  rownames_to_column(var = "RowNames")
 
-# Create the base table
-sup_table1_base <- matrix("", nrow = length(vars_in_sup_table1) + 2, ncol = 4)
-colnames(sup_table1_base) <- c("", "", "Mean (SD)", "Mean (SD)")
+# # Create the flextable with the modified dataframe
+# table1_flextable <- flextable(table1_base) %>%
+#   fontsize(size = 6, part = "all")
 
-# Fill in the table with statistics
-for (i in 1:length(vars_in_sup_table1)) {
-  sup_table1_base[i + 2, 1] <- variable_labels[vars_in_sup_table1[i]]
-  sup_table1_base[i + 2, 2] <- "Overall"
-  sup_table1_base[i + 2, 3] <- sprintf("%.2f (%.2f)", mean(dataframe_for_sup_table1[[vars_in_sup_table1[i]]], na.rm = TRUE), sd(dataframe_for_sup_table1[[vars_in_sup_table1[i]]], na.rm = TRUE))
-  sup_table1_base[i + 2, 4] <- ""
-  for (j in levels(dataframe_for_sup_table1[[stratifyby]])) {
-    sup_table1_base[i + 2, 4] <- paste(sup_table1_base[i + 2, 4], sprintf("%.2f (%.2f)", mean(dataframe_for_sup_table1[[vars_in_sup_table1[i]]][dataframe_for_sup_table1[[stratifyby]] == j], na.rm = TRUE), sd(dataframe_for_sup_table1[[vars_in_sup_table1[i]]][dataframe_for_sup_table1[[stratifyby]] == j], na.rm = TRUE)), sep = " / ")
-  }
-}
+table1_flextable <- flextable(sup_table1_base) %>%
+  fontsize(size = 6, part = "all") %>%
+  set_table_properties(width = .95, layout = "autofit") %>% # Adjust the table width
+  border_outer(border = fp_border(color = "black", width = 1)) %>%
+  border_inner(border = fp_border(color = "black", width = 1)) %>%
+  border(border = fp_border(color = "black", width = 1))
 
-# Print the table
-print(sup_table1_base)
+# Create a new Word document
+doc <- read_docx()
 
+# Add the flextable to the document
+doc <- body_add_flextable(doc, value = table1_flextable)
+
+# Save the document
+print(doc, target = "tables/sup_table1.docx")
 ```
-
 
 # Deprecated
 
 ## Table strat by band
-
-
 
 ```{r}
 # Create a list of the sodium bands

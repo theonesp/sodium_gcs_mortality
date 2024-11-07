@@ -476,7 +476,6 @@ selected_df_imputed%<>%
     electivesurgery=
     if_else(is.na(electivesurgery),0,electivesurgery)
     )
-
 ```
 
 # Creating categorical dataframes
