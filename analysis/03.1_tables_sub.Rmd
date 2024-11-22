@@ -19,14 +19,115 @@ library(forcats)
 library(stringi)
 ```
 
-# Sup Table 2A: Not mechanical ventialed
+# Sup Table 2: Mediation tables for Surgery Type
 
 ```{r}
+# Load necessary libraries
+
+# Define a function to process mediation results
+process_mediation_results <- function(category, elective_status) {
+  df_name <- paste0("mediation_results_cat", category, "_", elective_status, "_sum")
+  df <- get(df_name)
+  df$cat <- category
+  df$results <- stri_replace_all_fixed(rownames(df), '(treated)', "")
+  return(df)
+}
+
+# List of categories
+categories <- c(1, 2, 3, 4, 6, 7, 8)
+
+# Process elective data frames
+mediation_results_elective <- do.call(rbind, lapply(categories, process_mediation_results, elective_status = "elective"))
+
+# Process not elective data frames
+mediation_results_not_elective <- do.call(rbind, lapply(categories, process_mediation_results, elective_status = "not_elective"))
+
+# Remove rownames
+rownames(mediation_results_elective) <- NULL
+rownames(mediation_results_not_elective) <- NULL
+
+# Add total effect (Odds ratio) to the tables
+total_effect_elective_results <- total_effect_elective %>%
+  mutate(lb = estimated - 1.96 * se, ub = estimated + 1.96 * se) %>%
+  mutate(or = exp(estimated), or.lb = exp(lb), or.ub = exp(ub)) %>%
+  transmute(Estimate = or, '95% CI Upper' = or.ub, '95% CI Lower' = or.lb, cat = 5, 'p-value' = p, results = "Total Effect (OR)")
+
+total_effect_not_elective_results <- total_effect_not_elective %>%
+  mutate(lb = estimated - 1.96 * se, ub = estimated + 1.96 * se) %>%
+  mutate(or = exp(estimated), or.lb = exp(lb), or.ub = exp(ub)) %>%
+  transmute(Estimate = or, '95% CI Upper' = or.ub, '95% CI Lower' = or.lb, cat = 5, 'p-value' = p, results = "Total Effect (OR)")
+
+# Combine results
+results_overall_elective <- rbind(mediation_results_elective, total_effect_elective_results)
+results_overall_not_elective <- rbind(mediation_results_not_elective, total_effect_not_elective_results)
+
+# Remove rownames
+rownames(results_overall_elective) <- NULL
+rownames(results_overall_not_elective) <- NULL
 
 ```
 
+## Combine
 
-# Sup. Table 4A: Mediation tables for ICU Types
+```{r}
+# Load necessary libraries
+library(dplyr)
+
+# Add 'Surgery Type' column to each table
+results_overall_elective <- results_overall_elective %>%
+  mutate(Surgery_Type = "Elective")
+
+results_overall_not_elective <- results_overall_not_elective %>%
+  mutate(Surgery_Type = "Not Elective")
+
+# Combine both tables
+results_combined_surgery_type <- bind_rows(results_overall_elective, results_overall_not_elective)
+
+# Rename columns and reassign category values
+results_combined_surgery_type <- results_combined_surgery_type %>%
+  rename(`Effect Type` = results, `Sodium Category` = cat) %>%
+  mutate(`Sodium Category` = case_when(
+    `Sodium Category` == 1 ~ "<120",
+    `Sodium Category` == 2 ~ "120 - <125",
+    `Sodium Category` == 3 ~ "125 - <130",
+    `Sodium Category` == 4 ~ "130 - <135",
+    `Sodium Category` == 5 ~ "135 - <140",
+    `Sodium Category` == 6 ~ "140 - <145",
+    `Sodium Category` == 7 ~ "145 - <150",
+    `Sodium Category` == 8 ~ ">= 150"
+  ))
+
+# Round numeric columns to 3 decimal places and format p-values
+results_combined_surgery_type <- results_combined_surgery_type %>%
+  mutate(
+    Estimate = round(Estimate, 3),
+    `95% CI Lower` = round(`95% CI Lower`, 3),
+    `95% CI Upper` = round(`95% CI Upper`, 3),
+    `p-value` = ifelse(`p-value` < 0.001, "< 0.001", round(`p-value`, 3))
+  )
+
+# Reorder columns so that 'Effect Type' comes after 'Surgery_Type'
+# Arrange by 'Sodium Category' in the desired order
+results_combined_surgery_type <- results_combined_surgery_type %>%
+  select(Surgery_Type, `Effect Type`, `Sodium Category`, everything()) %>%
+  mutate(`Sodium Category` = factor(`Sodium Category`, 
+                                    levels = c("<120", "120 - <125", "125 - <130", 
+                                               "130 - <135", "135 - <140", "140 - <145", 
+                                               "145 - <150", ">= 150"))) %>%
+  arrange(`Sodium Category`, `Effect Type`, Surgery_Type)
+```
+
+
+## Results export
+
+```{r}
+# Save overall elective and not elective results
+save_to_word(results_combined_surgery_type, "tables/sup_table2_mediation_analysis_surgery_type.docx")
+```
+
+# Deprecated
+
+# Sup. Table XX: Mediation tables for ICU Types
 
 ```{r}
 library(dplyr)
@@ -158,59 +259,4 @@ for (i in seq_along(icu_names)) {
 }
 ```
 
-# Sup. Table 4B: Mediation tables for Surgery Type
 
-```{r}
-# Load necessary libraries
-
-
-# Define a function to process mediation results
-process_mediation_results <- function(category, elective_status) {
-  df_name <- paste0("mediation_results_cat", category, "_", elective_status, "_sum")
-  df <- get(df_name)
-  df$cat <- category
-  df$results <- stri_replace_all_fixed(rownames(df), '(treated)', "")
-  return(df)
-}
-
-# List of categories
-categories <- c(1, 2, 3, 4, 6, 7, 8)
-
-# Process elective data frames
-mediation_results_elective <- do.call(rbind, lapply(categories, process_mediation_results, elective_status = "elective"))
-
-# Process not elective data frames
-mediation_results_not_elective <- do.call(rbind, lapply(categories, process_mediation_results, elective_status = "not_elective"))
-
-# Remove rownames
-rownames(mediation_results_elective) <- NULL
-rownames(mediation_results_not_elective) <- NULL
-
-# Add total effect (Odds ratio) to the tables
-total_effect_elective_results <- total_effect_elective %>%
-  mutate(lb = estimated - 1.96 * se, ub = estimated + 1.96 * se) %>%
-  mutate(or = exp(estimated), or.lb = exp(lb), or.ub = exp(ub)) %>%
-  transmute(Estimate = or, '95% CI Upper' = or.ub, '95% CI Lower' = or.lb, cat = 5, 'p-value' = p, results = "Total Effect (OR)")
-
-total_effect_not_elective_results <- total_effect_not_elective %>%
-  mutate(lb = estimated - 1.96 * se, ub = estimated + 1.96 * se) %>%
-  mutate(or = exp(estimated), or.lb = exp(lb), or.ub = exp(ub)) %>%
-  transmute(Estimate = or, '95% CI Upper' = or.ub, '95% CI Lower' = or.lb, cat = 5, 'p-value' = p, results = "Total Effect (OR)")
-
-# Combine results
-results_overall_elective <- rbind(mediation_results_elective, total_effect_elective_results)
-results_overall_not_elective <- rbind(mediation_results_not_elective, total_effect_not_elective_results)
-
-# Remove rownames
-rownames(results_overall_elective) <- NULL
-rownames(results_overall_not_elective) <- NULL
-
-```
-
-## Results export
-
-```{r}
-# Save overall elective and not elective results
-save_to_word(results_overall_elective, "tables/sup_table4B_mediation_analysis_elective_surgery.docx")
-save_to_word(results_overall_not_elective, "tables/sup_table4B_mediation_analysis_non_elective_surgery.docx.docx")
-```

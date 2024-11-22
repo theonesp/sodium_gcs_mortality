@@ -490,7 +490,7 @@ mediation_results_cat4_not_elective_sum
 
 ```
 
-##### !!! Sensitivity Analysis
+##### Sensitivity Analysis
 
 ```{r}
 sens.out_not_elective4 <- medsens(mediation_results_cat4_not_elective, rho.by = 0.1, effect.type = "indirect", sims = 200)
@@ -679,7 +679,6 @@ for (icu in icu_names) {
 
 message("Mediation analysis completed for all categories and ICU types.")
 ```
-
 ## Subanalysis 3, Mechanically ventilated and not Mechanically ventilated
 
 ```{r}

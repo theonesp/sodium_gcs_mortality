@@ -16,6 +16,7 @@ library(tibble)
 library(survival)
 library(stringr)
 library(forcats)
+library(Hmisc)
 
 
 # Function to convert a dataframe to a flextable
@@ -134,7 +135,6 @@ print(doc, target = "tables/table1.docx")
 
 ```{r}
 dataframe_for_sup_table1 <- selected_df_imputed
-
 
 vars_in_sup_table1 <- c("MAP", "temperature", "heartrate", "respiratoryrate", "day1fio2", "day1pao2", "pco2", "ph", "urine", "albumin", "bilirubin", "wbc", "cirrhosis", "aids", "leukemia", "immunosuppression","sodium_cat")
 

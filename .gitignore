@@ -8,3 +8,4 @@ selected_df.Rds
 *.csv
 *.zip
 .DS_Store
+sodium_gcs_mortality.RDataTmp
